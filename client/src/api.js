@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const baseURL = `${apiHost.replace(/\/$/, '')}/api`;
 const USER_ID_KEY = 'binary-prediction-user-id';
 
 const getUserIdentifier = () => {
