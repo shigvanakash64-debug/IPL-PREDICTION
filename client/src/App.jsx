@@ -1,135 +1,97 @@
-import { useEffect, useMemo, useState } from 'react';
-import api from './api';
-import QuestionCard from './components/QuestionCard';
-import ResultCard from './components/ResultCard';
-import Loader from './components/Loader';
-import ErrorBanner from './components/ErrorBanner';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import api, { AUTH_STORAGE_KEY } from './api';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import UserDashboard from './pages/UserDashboard';
+import AdminPanel from './pages/AdminPanel';
 
-const PREDICTION_STORAGE_KEY = 'binary-prediction-predictions';
-const USER_ID_KEY = 'binary-prediction-user-id';
+const loadAuth = () => {
+  const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!stored) return null;
 
-const getUserIdentifier = () => {
-  let storedId = localStorage.getItem(USER_ID_KEY);
-  if (!storedId) {
-    storedId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}`;
-    localStorage.setItem(USER_ID_KEY, storedId);
+  try {
+    return JSON.parse(stored);
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return null;
   }
-  return storedId;
+};
+
+const saveAuth = (authData) => {
+  if (authData) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+  } else {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
 };
 
 function App() {
-  const [matches, setMatches] = useState([]);
-  const [localPredictions, setLocalPredictions] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [auth, setAuth] = useState(loadAuth());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const storedPredictions = localStorage.getItem(PREDICTION_STORAGE_KEY);
-    if (storedPredictions) {
-      try {
-        setLocalPredictions(JSON.parse(storedPredictions));
-      } catch (err) {
-        localStorage.removeItem(PREDICTION_STORAGE_KEY);
-      }
-    }
-    fetchMatches();
-  }, []);
+    saveAuth(auth);
+  }, [auth]);
 
-  const fetchMatches = async () => {
+  const handleLogin = async (credentials) => {
     setLoading(true);
-    setError('');
-
     try {
-      getUserIdentifier();
-      const response = await api.get('/matches');
-      setMatches(response.data);
-    } catch (err) {
-      setError('Unable to load matches. Please try again later.');
+      const response = await api.post('/auth/login', credentials);
+      setAuth(response.data);
+      return response.data;
     } finally {
       setLoading(false);
     }
   };
 
-  const activeMatch = matches[0] || null;
-  const selectedTeam = activeMatch
-    ? localPredictions[activeMatch.matchId] || activeMatch.userPrediction
-    : null;
-
-  const handlePredict = async (team) => {
-    if (!activeMatch || selectedTeam || submitting) return;
-
-    setSubmitting(true);
-    setError('');
-
+  const handleRegister = async (payload) => {
+    setLoading(true);
     try {
-      const response = await api.post(`/predict/${activeMatch.matchId}`, {
-        selectedTeam: team,
-      });
-
-      const updatedMatch = {
-        ...activeMatch,
-        userPrediction: team,
-        totalVotes: response.data.totalVotes ?? activeMatch.totalVotes + 1,
-      };
-
-      setMatches((current) =>
-        current.map((item) =>
-          item.matchId === activeMatch.matchId ? updatedMatch : item
-        )
-      );
-
-      const nextPredictions = { ...localPredictions, [activeMatch.matchId]: team };
-      localStorage.setItem(PREDICTION_STORAGE_KEY, JSON.stringify(nextPredictions));
-      setLocalPredictions(nextPredictions);
-    } catch (err) {
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Unable to submit your prediction. Try again.');
-      }
+      const response = await api.post('/auth/register', payload);
+      setAuth(response.data);
+      return response.data;
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    setAuth(null);
+  };
+
+  const authUser = auth?.user || null;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-10 text-center">
-          <p className="text-cyan-400 uppercase tracking-[0.35em] text-sm">Live IPL Prediction</p>
-          <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Predict the next IPL winner.</h1>
-          <p className="mt-4 text-slate-400">Choose one team per match and see your saved prediction.</p>
-        </header>
-
-        {error && <ErrorBanner message={error} />}
-
-        <main className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow backdrop-blur-xl">
-          {loading ? (
-            <Loader />
-          ) : !activeMatch ? (
-            <div className="space-y-4 text-center text-slate-400">
-              <p>No live or upcoming IPL matches available right now.</p>
-              <button
-                type="button"
-                onClick={fetchMatches}
-                className="inline-flex items-center justify-center rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
-              >
-                Refresh
-              </button>
-            </div>
-          ) : selectedTeam ? (
-            <ResultCard match={activeMatch} selectedTeam={selectedTeam} />
-          ) : (
-            <QuestionCard
-              match={activeMatch}
-              onPredict={handlePredict}
-              disabled={submitting}
+    <BrowserRouter>
+      <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <Routes>
+            <Route
+              path="/login"
+              element={authUser ? <Navigate to={authUser.role === 'admin' ? '/admin' : '/dashboard'} /> : <LoginPage onLogin={handleLogin} loading={loading} />}
             />
-          )}
-        </main>
+            <Route
+              path="/register"
+              element={authUser ? <Navigate to={authUser.role === 'admin' ? '/admin' : '/dashboard'} /> : <RegisterPage onRegister={handleRegister} loading={loading} />}
+            />
+            <Route
+              path="/dashboard"
+              element={authUser ? (authUser.role === 'admin' ? <Navigate to="/admin" /> : <UserDashboard authUser={authUser} onLogout={handleLogout} api={api} />) : <Navigate to="/login" />}
+            />
+            <Route
+              path="/admin"
+              element={authUser ? (authUser.role === 'admin' ? <AdminPanel authUser={authUser} onLogout={handleLogout} api={api} /> : <Navigate to="/dashboard" />) : <Navigate to="/login" />}
+            />
+            <Route
+              path="/"
+              element={authUser ? <Navigate to={authUser.role === 'admin' ? '/admin' : '/dashboard'} /> : <Navigate to="/login" />}
+            />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </BrowserRouter>
   );
 }
 
