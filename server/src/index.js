@@ -1,32 +1,29 @@
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const connectDB = require('./config/db');
-const matchRoutes = require('./routes/matches');
-const predictionRoutes = require('./routes/predictions');
-const { startMatchUpdater } = require('./services/matchUpdater');
+const requestRoutes = require('./routes/request');
 
 dotenv.config();
+
 const app = express();
+
+const uploadsPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
-
-app.use('/api/matches', matchRoutes);
-app.use('/api/predict', predictionRoutes);
+app.use('/uploads', express.static(uploadsPath));
+app.use('/api', requestRoutes);
 
 app.get('/', (req, res) => {
-  res.send({ message: 'Live IPL Prediction API is running' });
+  res.send({ message: 'Wallet request API is running' });
 });
 
 const PORT = process.env.PORT || 4000;
-
-const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-    startMatchUpdater();
-  });
-};
-
-startServer();
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
