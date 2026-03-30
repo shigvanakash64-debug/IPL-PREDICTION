@@ -42,4 +42,42 @@ const appendRequestRow = async ({ id, name, amount, screenshotUrl, status, times
   });
 };
 
-module.exports = { appendRequestRow };
+const fetchRequestRows = async () => {
+  const spreadsheetId = process.env.REQUEST_SHEET_ID;
+  if (!spreadsheetId) {
+    throw new Error('Missing REQUEST_SHEET_ID environment variable');
+  }
+
+  const sheets = await getSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: 'REQUESTS!A:F',
+  });
+
+  const rows = response.data.values || [];
+  if (!rows.length) {
+    return [];
+  }
+
+  const [firstRow, ...dataRows] = rows;
+  const hasHeader =
+    firstRow[0] === 'ID' &&
+    firstRow[1] === 'Name' &&
+    firstRow[2] === 'Amount' &&
+    firstRow[3] === 'Screenshot' &&
+    firstRow[4] === 'Status' &&
+    firstRow[5] === 'Timestamp';
+
+  const rowsToParse = hasHeader ? dataRows : rows;
+
+  return rowsToParse.map((row) => ({
+    id: row[0] || '',
+    name: row[1] || '',
+    amount: row[2] || '',
+    screenshotUrl: row[3] || '',
+    status: row[4] || '',
+    timestamp: row[5] || '',
+  }));
+};
+
+module.exports = { appendRequestRow, fetchRequestRows };
