@@ -69,4 +69,35 @@ const createPrediction = async (req, res) => {
   }
 };
 
-module.exports = { createPrediction, listUserPredictions };
+const updatePredictionPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount } = req.body;
+
+    if (amount === undefined || amount === null) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+
+    const numericAmount = Number(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than zero' });
+    }
+
+    const prediction = await Prediction.findOne({ _id: id, userId: req.user._id });
+    if (!prediction) {
+      return res.status(404).json({ error: 'Prediction not found' });
+    }
+
+    prediction.amount = numericAmount;
+    prediction.paymentStatus = 'pending';
+    prediction.paymentNote = `PRED_${prediction._id}`;
+    await prediction.save();
+
+    return res.status(200).json({ success: true, prediction });
+  } catch (error) {
+    console.error('updatePredictionPayment error:', error);
+    return res.status(500).json({ error: 'Unable to update payment details' });
+  }
+};
+
+module.exports = { createPrediction, listUserPredictions, updatePredictionPayment };

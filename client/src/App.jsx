@@ -5,6 +5,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminPanel from './pages/AdminPanel';
+import BetPage from './pages/BetPage';
+import PaymentPage from './pages/PaymentPage';
+import ConfirmationPage from './pages/ConfirmationPage';
 
 const loadAuth = () => {
   const stored = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -126,6 +129,18 @@ function App() {
             <Route
               path="/admin"
               element={authUser ? (authUser.role === 'admin' ? <AdminPanel authUser={authUser} onLogout={handleLogout} api={api} /> : <Navigate to="/dashboard" />) : <Navigate to="/login" />}
+            />
+            <Route
+              path="/bet"
+              element={authUser ? <BetPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/payment"
+              element={authUser ? <PaymentPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/confirmation"
+              element={authUser ? <ConfirmationPage /> : <Navigate to="/login" />}
             />
             <Route
               path="/"

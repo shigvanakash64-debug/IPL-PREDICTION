@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function UserDashboard({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
@@ -27,14 +28,24 @@ export default function UserDashboard({ authUser, onLogout, api }) {
     loadData();
   }, [api]);
 
-  const handlePredict = async (questionId, option) => {
+  const navigate = useNavigate();
+
+  const handlePredict = async (questionId, option, questionText) => {
     setError('');
     setSubmittingQuestion(questionId);
 
     try {
       const response = await api.post('/predictions', { questionId, option });
-      if (response.data?.prediction) {
-        setPredictions((prev) => [...prev, response.data.prediction]);
+      const prediction = response.data?.prediction;
+      if (prediction) {
+        setPredictions((prev) => [...prev, prediction]);
+        navigate('/bet', {
+          state: {
+            predictionId: prediction._id,
+            option,
+            question: questionText,
+          },
+        });
       }
     } catch (err) {
       setError(err?.response?.data?.error || 'Unable to submit prediction.');
@@ -99,7 +110,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                           key={option}
                           type="button"
                           disabled={Boolean(existingPrediction) || isSubmitting}
-                          onClick={() => handlePredict(question._id, option)}
+                          onClick={() => handlePredict(question._id, option, question.text)}
                           className={`rounded-3xl border px-4 py-3 text-left text-lg font-semibold transition duration-200 ${
                             selected
                               ? 'border-cyan-400 bg-cyan-500 text-slate-950'

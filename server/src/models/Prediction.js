@@ -6,6 +6,10 @@ const predictionSchema = new mongoose.Schema({
   matchId: { type: String, required: true, trim: true },
   questionType: { type: String, enum: ['toss', 'match'], default: 'match' },
   selectedOption: { type: String, required: true, trim: true },
+  amount: { type: Number, default: 0 },
+  paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' },
+  paymentNote: { type: String, trim: true },
+  paymentProof: { type: String, trim: true },
   syncedToSheet: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
