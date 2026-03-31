@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import api, { AUTH_STORAGE_KEY } from './api';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -29,6 +29,7 @@ const saveAuth = (authData) => {
 function App() {
   const [auth, setAuth] = useState(loadAuth());
   const [loading, setLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     saveAuth(auth);
@@ -64,7 +65,50 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="relative min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="absolute right-4 top-4 z-20 text-right">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((current) => !current)}
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-400 hover:text-white"
+          >
+            Menu
+          </button>
+          {menuOpen && (
+            <div className="mt-3 w-44 rounded-3xl border border-slate-700 bg-slate-900 p-3 shadow-glow text-left">
+              {auth?.user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full rounded-2xl bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                >
+                  Logout
+                </button>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-2xl bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setMenuOpen(false)}
+                    className="mt-2 block rounded-2xl bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="mx-auto max-w-5xl">
           <Routes>
             <Route

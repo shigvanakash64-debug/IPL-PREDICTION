@@ -80,4 +80,29 @@ const fetchRequestRows = async () => {
   }));
 };
 
-module.exports = { appendRequestRow, fetchRequestRows };
+const appendPredictionRow = async ({ username, matchId, questionType, selectedOption, timestamp }) => {
+  const spreadsheetId = process.env.PREDICTION_SHEET_ID;
+  if (!spreadsheetId) {
+    console.warn('Missing PREDICTION_SHEET_ID environment variable. Skipping Google Sheets sync.');
+    return false;
+  }
+
+  try {
+    const sheets = await getSheetsClient();
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'PREDICTIONS!A:E',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[timestamp, username, matchId, questionType, selectedOption]],
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error('appendPredictionRow error:', error.message || error);
+    return false;
+  }
+};
+
+module.exports = { appendRequestRow, fetchRequestRows, appendPredictionRow };

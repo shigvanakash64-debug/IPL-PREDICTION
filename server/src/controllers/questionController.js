@@ -2,7 +2,7 @@ const Question = require('../models/Question');
 
 const listQuestions = async (req, res) => {
   try {
-    const questions = await Question.find().select('text options createdAt');
+    const questions = await Question.find().select('text options questionType createdAt');
     return res.status(200).json({ questions });
   } catch (error) {
     console.error('listQuestions error:', error);

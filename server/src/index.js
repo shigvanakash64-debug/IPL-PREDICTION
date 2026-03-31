@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const questionRoutes = require('./routes/questions');
 const requestRoutes = require('./routes/request');
+const predictionRoutes = require('./routes/predictions');
 
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -39,6 +40,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/predictions', predictionRoutes);
 app.use('/api', requestRoutes);
 
 app.get('/', (req, res) => {

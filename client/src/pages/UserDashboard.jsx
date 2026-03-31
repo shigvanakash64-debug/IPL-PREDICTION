@@ -2,23 +2,51 @@ import { useEffect, useState } from 'react';
 
 export default function UserDashboard({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
+  const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [submittingQuestion, setSubmittingQuestion] = useState(null);
 
   useEffect(() => {
-    const loadQuestions = async () => {
+    const loadData = async () => {
       try {
-        const response = await api.get('/questions');
-        setQuestions(response.data.questions || []);
+        const [questionsResponse, predictionsResponse] = await Promise.all([
+          api.get('/questions'),
+          api.get('/predictions'),
+        ]);
+
+        setQuestions(questionsResponse.data.questions || []);
+        setPredictions(predictionsResponse.data.predictions || []);
       } catch (err) {
-        setError('Unable to load questions.');
+        setError('Unable to load questions or predictions.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadQuestions();
+    loadData();
   }, [api]);
+
+  const handlePredict = async (questionId, option) => {
+    setError('');
+    setSubmittingQuestion(questionId);
+
+    try {
+      const response = await api.post('/predictions', { questionId, option });
+      if (response.data?.prediction) {
+        setPredictions((prev) => [...prev, response.data.prediction]);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Unable to submit prediction.');
+    } finally {
+      setSubmittingQuestion(null);
+    }
+  };
+
+  const predictionByQuestion = predictions.reduce((acc, item) => {
+    acc[item.matchId] = item;
+    return acc;
+  }, {});
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -55,19 +83,47 @@ export default function UserDashboard({ authUser, onLogout, api }) {
           <p className="mt-6 text-slate-400">No questions have been created yet.</p>
         ) : (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {questions.map((question) => (
-              <div key={question._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Prediction</p>
-                <h3 className="mt-3 text-lg font-semibold text-white">{question.text}</h3>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {question.options.map((option, index) => (
-                    <span key={index} className="rounded-full bg-slate-800 px-3 py-2 text-sm text-slate-200">
-                      {option}
-                    </span>
-                  ))}
+            {questions.map((question) => {
+              const existingPrediction = predictionByQuestion[question._id];
+              const isSubmitting = submittingQuestion === question._id;
+
+              return (
+                <div key={question._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Prediction</p>
+                  <h3 className="mt-3 text-lg font-semibold text-white">{question.text}</h3>
+                  <div className="mt-4 grid gap-3">
+                    {question.options.map((option) => {
+                      const selected = existingPrediction?.selectedOption === option;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          disabled={Boolean(existingPrediction) || isSubmitting}
+                          onClick={() => handlePredict(question._id, option)}
+                          className={`rounded-3xl border px-4 py-3 text-left text-lg font-semibold transition duration-200 ${
+                            selected
+                              ? 'border-cyan-400 bg-cyan-500 text-slate-950'
+                              : 'border-slate-700 bg-slate-900 text-white hover:border-cyan-400 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-60'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {existingPrediction ? (
+                    <p className="mt-4 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-emerald-300">
+                      Prediction submitted: <span className="font-semibold text-white">{existingPrediction.selectedOption}</span>
+                    </p>
+                  ) : isSubmitting ? (
+                    <p className="mt-4 text-sm text-slate-400">Submitting prediction…</p>
+                  ) : (
+                    <p className="mt-4 text-sm text-slate-500">Choose one option. One prediction per question.</p>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
