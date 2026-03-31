@@ -40,7 +40,7 @@ const getCountdown = (cutoffTime) => {
 export default function BetPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { predictionId, option, question, cutoffTime } = location.state || {};
+  const { predictionId, option, question, cutoffTime, username } = location.state || {};
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -96,6 +96,7 @@ export default function BetPage() {
           option,
           question,
           cutoffTime,
+          username,
         },
       });
     } catch (err) {

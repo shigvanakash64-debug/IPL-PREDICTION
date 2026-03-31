@@ -1,4 +1,5 @@
 const Question = require('../models/Question');
+const Prediction = require('../models/Prediction');
 const { parseISTDateTimeLocal, getNext630PMIST } = require('../utils/timeUtils');
 
 const createQuestion = async (req, res) => {
@@ -54,4 +55,42 @@ const deleteQuestion = async (req, res) => {
   }
 };
 
-module.exports = { createQuestion, getQuestions, deleteQuestion };
+const listPredictions = async (req, res) => {
+  try {
+    const predictions = await Prediction.find()
+      .sort({ createdAt: -1 })
+      .select('userId username matchId questionType selectedOption amount paymentStatus paymentNote createdAt');
+
+    return res.status(200).json({ predictions });
+  } catch (error) {
+    console.error('listPredictions error:', error);
+    return res.status(500).json({ error: 'Unable to load predictions' });
+  }
+};
+
+const updatePredictionStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['paid', 'rejected'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid payment status' });
+    }
+
+    const prediction = await Prediction.findById(id);
+    if (!prediction) {
+      return res.status(404).json({ error: 'Prediction not found' });
+    }
+
+    prediction.paymentStatus = status;
+    await prediction.save();
+
+    return res.status(200).json({ success: true, prediction });
+  } catch (error) {
+    console.error('updatePredictionStatus error:', error);
+    return res.status(500).json({ error: 'Unable to update prediction status' });
+  }
+};
+
+module.exports = { createQuestion, getQuestions, deleteQuestion, listPredictions, updatePredictionStatus };

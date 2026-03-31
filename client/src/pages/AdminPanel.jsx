@@ -6,8 +6,11 @@ export default function AdminPanel({ authUser, onLogout, api }) {
   const [option1, setOption1] = useState('');
   const [option2, setOption2] = useState('');
   const [loading, setLoading] = useState(true);
+  const [predictionsLoading, setPredictionsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [predictions, setPredictions] = useState([]);
+  const [predictionsError, setPredictionsError] = useState('');
 
   const loadQuestions = async () => {
     setLoading(true);
@@ -24,7 +27,31 @@ export default function AdminPanel({ authUser, onLogout, api }) {
 
   useEffect(() => {
     loadQuestions();
+    loadPredictions();
   }, []);
+
+  const loadPredictions = async () => {
+    setPredictionsLoading(true);
+    setPredictionsError('');
+    try {
+      const response = await api.get('/admin/predictions');
+      setPredictions(response.data.predictions || []);
+    } catch (err) {
+      setPredictionsError('Unable to load payment predictions.');
+    } finally {
+      setPredictionsLoading(false);
+    }
+  };
+
+  const handlePaymentStatus = async (id, status) => {
+    setPredictionsError('');
+    try {
+      const response = await api.patch(`/admin/predictions/${id}/status`, { status });
+      setPredictions((current) => current.map((item) => (item._id === id ? response.data.prediction : item)));
+    } catch (err) {
+      setPredictionsError(err?.response?.data?.error || 'Unable to update payment status.');
+    }
+  };
 
   const handleCreate = async (event) => {
     event.preventDefault();
@@ -166,6 +193,58 @@ export default function AdminPanel({ authUser, onLogout, api }) {
                   >
                     Delete
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Payment verification</h2>
+            <p className="mt-1 text-sm text-slate-400">Approve or reject pending payments after manual verification.</p>
+          </div>
+        </div>
+
+        {predictionsLoading ? (
+          <p className="mt-6 text-slate-400">Loading payment requests…</p>
+        ) : predictionsError ? (
+          <p className="mt-6 text-rose-400">{predictionsError}</p>
+        ) : predictions.length === 0 ? (
+          <p className="mt-6 text-slate-400">No payment records available yet.</p>
+        ) : (
+          <div className="mt-6 space-y-4">
+            {predictions.map((prediction) => (
+              <div key={prediction._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Payment review</p>
+                    <h3 className="mt-3 text-lg font-semibold text-white">{prediction.username || 'Unknown user'}</h3>
+                    <p className="mt-2 text-sm text-slate-400">Prediction ID: <span className="font-semibold text-white">{prediction._id}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Note: <span className="font-semibold text-white">PRED_{prediction._id}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Amount: <span className="font-semibold text-white">₹{prediction.amount || 0}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Status: <span className="font-semibold text-white">{prediction.paymentStatus}</span></p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={prediction.paymentStatus === 'paid'}
+                      onClick={() => handlePaymentStatus(prediction._id, 'paid')}
+                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      disabled={prediction.paymentStatus === 'rejected'}
+                      onClick={() => handlePaymentStatus(prediction._id, 'rejected')}
+                      className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

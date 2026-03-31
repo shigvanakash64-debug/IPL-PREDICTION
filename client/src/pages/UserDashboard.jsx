@@ -72,6 +72,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
             option,
             question: questionText,
             cutoffTime,
+            username: authUser.name || authUser.username || 'Participant',
           },
         });
       }
