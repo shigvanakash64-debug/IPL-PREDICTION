@@ -1,15 +1,22 @@
 const Question = require('../models/Question');
+const { parseISTDateTimeLocal, getNext630PMIST } = require('../utils/timeUtils');
 
 const createQuestion = async (req, res) => {
   try {
-    const { text, option1, option2 } = req.body;
+    const { text, option1, option2, cutoffTime } = req.body;
     if (!text || !option1 || !option2) {
       return res.status(400).json({ error: 'Question text and two options are required' });
+    }
+
+    const cutoffDate = cutoffTime ? parseISTDateTimeLocal(cutoffTime) : getNext630PMIST();
+    if (!cutoffDate) {
+      return res.status(400).json({ error: 'Invalid cutoff time' });
     }
 
     const question = new Question({
       text: text.trim(),
       options: [option1.trim(), option2.trim()],
+      cutoffTime: cutoffDate,
       createdBy: req.user._id,
     });
     await question.save();

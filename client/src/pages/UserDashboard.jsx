@@ -1,6 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const getISTDate = (value) => {
+  const date = new Date(value);
+  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utc + 330 * 60000);
+};
+
+const getQuestionStatus = (cutoffTime) => {
+  if (!cutoffTime) return 'Open';
+  const nowIst = getISTDate(new Date());
+  const cutoffIst = getISTDate(cutoffTime);
+  return nowIst.getTime() > cutoffIst.getTime() ? 'Closed' : 'Open';
+};
+
+const formatIST = (cutoffTime) => {
+  if (!cutoffTime) return '6:30 PM IST';
+  const ist = getISTDate(cutoffTime);
+  const hours = ist.getHours();
+  const minutes = String(ist.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const normalizedHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${normalizedHour}:${minutes} ${ampm} IST`;
+};
+
 export default function UserDashboard({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -30,7 +53,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
 
   const navigate = useNavigate();
 
-  const handlePredict = async (questionId, option, questionText) => {
+  const handlePredict = async (questionId, option, questionText, cutoffTime) => {
     setError('');
     setSubmittingQuestion(questionId);
 
@@ -38,12 +61,17 @@ export default function UserDashboard({ authUser, onLogout, api }) {
       const response = await api.post('/predictions', { questionId, option });
       const prediction = response.data?.prediction;
       if (prediction) {
-        setPredictions((prev) => [...prev, prediction]);
+        setPredictions((prev) => [
+          ...prev.filter((item) => item._id !== prediction._id),
+          prediction,
+        ]);
         navigate('/bet', {
           state: {
             predictionId: prediction._id,
+            questionId,
             option,
             question: questionText,
+            cutoffTime,
           },
         });
       }
@@ -97,11 +125,21 @@ export default function UserDashboard({ authUser, onLogout, api }) {
             {questions.map((question) => {
               const existingPrediction = predictionByQuestion[question._id];
               const isSubmitting = submittingQuestion === question._id;
+              const status = question.status || getQuestionStatus(question.cutoffTime);
+              const isClosed = status === 'Closed';
 
               return (
                 <div key={question._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Prediction</p>
-                  <h3 className="mt-3 text-lg font-semibold text-white">{question.text}</h3>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Prediction</p>
+                      <h3 className="mt-3 text-lg font-semibold text-white">{question.text}</h3>
+                    </div>
+                    <span className={`rounded-2xl px-3 py-2 text-sm font-semibold ${isClosed ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-slate-950'}`}>
+                      {isClosed ? 'Closed' : 'Open'}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-400">Cutoff: {formatIST(question.cutoffTime)}</p>
                   <div className="mt-4 grid gap-3">
                     {question.options.map((option) => {
                       const selected = existingPrediction?.selectedOption === option;
@@ -109,8 +147,8 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                         <button
                           key={option}
                           type="button"
-                          disabled={Boolean(existingPrediction) || isSubmitting}
-                          onClick={() => handlePredict(question._id, option, question.text)}
+                          disabled={Boolean(existingPrediction) || isSubmitting || isClosed}
+                          onClick={() => handlePredict(question._id, option, question.text, question.cutoffTime)}
                           className={`rounded-3xl border px-4 py-3 text-left text-lg font-semibold transition duration-200 ${
                             selected
                               ? 'border-cyan-400 bg-cyan-500 text-slate-950'
@@ -129,6 +167,8 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                     </p>
                   ) : isSubmitting ? (
                     <p className="mt-4 text-sm text-slate-400">Submitting prediction…</p>
+                  ) : isClosed ? (
+                    <p className="mt-4 rounded-2xl bg-rose-950 px-4 py-3 text-sm text-rose-300">Prediction Closed</p>
                   ) : (
                     <p className="mt-4 text-sm text-slate-500">Choose one option. One prediction per question.</p>
                   )}
