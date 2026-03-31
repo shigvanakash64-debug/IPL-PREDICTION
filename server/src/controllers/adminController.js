@@ -57,7 +57,7 @@ const deleteQuestion = async (req, res) => {
 
 const listPredictions = async (req, res) => {
   try {
-    const predictions = await Prediction.find()
+    const predictions = await Prediction.find({ paymentStatus: 'pending' })
       .sort({ createdAt: -1 })
       .select('userId username matchId questionType selectedOption amount paymentStatus paymentNote createdAt');
 

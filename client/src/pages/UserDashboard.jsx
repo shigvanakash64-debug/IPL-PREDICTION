@@ -144,11 +144,12 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                   <div className="mt-4 grid gap-3">
                     {question.options.map((option) => {
                       const selected = existingPrediction?.selectedOption === option;
+                      const isDisabled = isSubmitting || isClosed || selected;
                       return (
                         <button
                           key={option}
                           type="button"
-                          disabled={Boolean(existingPrediction) || isSubmitting || isClosed}
+                          disabled={isDisabled}
                           onClick={() => handlePredict(question._id, option, question.text, question.cutoffTime)}
                           className={`rounded-3xl border px-4 py-3 text-left text-lg font-semibold transition duration-200 ${
                             selected
@@ -163,9 +164,14 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                   </div>
 
                   {existingPrediction ? (
-                    <p className="mt-4 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-emerald-300">
-                      Prediction submitted: <span className="font-semibold text-white">{existingPrediction.selectedOption}</span>
-                    </p>
+                    <>
+                      <p className="mt-4 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-emerald-300">
+                        Prediction submitted: <span className="font-semibold text-white">{existingPrediction.selectedOption}</span>
+                      </p>
+                      {!isClosed && (
+                        <p className="mt-3 text-sm text-slate-400">You can change your selection until cutoff time.</p>
+                      )}
+                    </>
                   ) : isSubmitting ? (
                     <p className="mt-4 text-sm text-slate-400">Submitting prediction…</p>
                   ) : isClosed ? (
