@@ -18,9 +18,9 @@ const getStatus = (cutoffTime) => {
 
 const buildGoogleFormUrl = ({ fullName, amount, predictionId }) => {
   const params = new URLSearchParams({
-    'entry.FULLNAME': fullName,
-    'entry.AMOUNT': amount,
-    'entry.PREDICTIONID': `PRED_${predictionId}`,
+    'entry.1999690954': fullName,
+    'entry.1897096866': amount,
+    'entry.1838227550': `PRED_${predictionId}`,
   });
   return `${GOOGLE_FORM_BASE_URL}&${params.toString()}`;
 };
@@ -31,6 +31,7 @@ export default function PaymentPage() {
   const { amount, predictionId, option, question, cutoffTime, username } = location.state || {};
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState('');
 
   const status = getStatus(cutoffTime);
   const isClosed = status === 'Closed';
@@ -65,13 +66,26 @@ export default function PaymentPage() {
       return;
     }
 
+    if (!amount || Number(amount) <= 0) {
+      setError('Amount is required before submitting payment proof.');
+      return;
+    }
+
+    if (!predictionId) {
+      setError('Prediction not found. Unable to continue.');
+      return;
+    }
+
     setError('');
     setConfirming(true);
 
     try {
       await api.patch(`/predictions/${predictionId}/confirm`);
       const formUrl = buildGoogleFormUrl({ fullName: displayName, amount, predictionId });
-      window.location.href = formUrl;
+      setConfirmationMessage('Please submit payment proof in the next step.');
+      setTimeout(() => {
+        window.open(formUrl, '_blank');
+      }, 150);
     } catch (err) {
       setError(err?.response?.data?.error || 'Unable to confirm payment.');
     } finally {
@@ -124,6 +138,7 @@ export default function PaymentPage() {
         </div>
 
         {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
+        {confirmationMessage && <p className="mt-4 text-sm text-emerald-300">{confirmationMessage}</p>}
 
         <div className="mt-8">
           <button

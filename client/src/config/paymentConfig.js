@@ -14,6 +14,5 @@ export const UPI_OPTIONS = [
   { label: 'UPI 12', id: 'upi4@bank' },
 ];
 
-// Replace FORM_ID with the actual Google Form ID for your payment proof form.
 export const GOOGLE_FORM_ID = '1FAIpQLScDJN0vNWIEvfDKUULxY_KMBJIJSjf7crYyXMDKVnYYW5NRNg';
-export const GOOGLE_FORM_BASE_URL = `https://docs.google.com/forms/d/e/1FAIpQLScDJN0vNWIEvfDKUULxY_KMBJIJSjf7crYyXMDKVnYYW5NRNg/viewform?usp=dialog`;
+export const GOOGLE_FORM_BASE_URL = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/viewform?usp=pp_url`;
