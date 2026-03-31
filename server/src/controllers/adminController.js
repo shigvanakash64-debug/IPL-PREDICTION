@@ -23,7 +23,7 @@ const createQuestion = async (req, res) => {
 
 const getQuestions = async (req, res) => {
   try {
-    const questions = await Question.find().populate('createdBy', 'name email');
+    const questions = await Question.find().populate('createdBy', 'name username');
     return res.status(200).json({ questions });
   } catch (error) {
     console.error('getQuestions error:', error);

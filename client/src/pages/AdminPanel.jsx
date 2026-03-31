@@ -123,7 +123,7 @@ export default function AdminPanel({ authUser, onLogout, api }) {
           <h2 className="text-xl font-semibold text-white">Admin info</h2>
           <p className="mt-2 text-sm text-slate-400">Only admins can access this panel.</p>
           <div className="mt-4 rounded-2xl bg-slate-950 p-4 text-sm text-slate-300">
-            <p><span className="font-semibold text-slate-100">Email:</span> {authUser.email}</p>
+            <p><span className="font-semibold text-slate-100">Username:</span> {authUser.username}</p>
             <p className="mt-2"><span className="font-semibold text-slate-100">Role:</span> {authUser.role}</p>
           </div>
         </div>

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function RegisterPage({ onRegister, loading }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -11,13 +11,13 @@ export default function RegisterPage({ onRegister, loading }) {
     event.preventDefault();
     setError('');
 
-    if (!name || !email || !password) {
-      setError('Name, email, and password are required.');
+    if (!displayName || !username || !password) {
+      setError('Display name, username, and password are required.');
       return;
     }
 
     try {
-      await onRegister({ name, email, password });
+      await onRegister({ name: displayName.trim(), username: username.trim(), password });
     } catch (err) {
       setError(err?.message || 'Unable to register.');
     }
@@ -30,21 +30,21 @@ export default function RegisterPage({ onRegister, loading }) {
 
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-sm font-medium text-slate-200">Name</label>
+          <label className="block text-sm font-medium text-slate-200">Display Name</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
             className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-200">Email</label>
+          <label className="block text-sm font-medium text-slate-200">Username</label>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
           />
         </div>

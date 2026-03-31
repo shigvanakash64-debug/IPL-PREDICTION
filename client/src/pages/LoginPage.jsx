@@ -2,20 +2,20 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function LoginPage({ onLogin, loading }) {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
-    if (!email || !password) {
-      setError('Email and password are required.');
+    if (!username || !password) {
+      setError('Username and password are required.');
       return;
     }
 
     try {
-      await onLogin({ email, password });
+      await onLogin({ username, password });
     } catch (err) {
       setError(err?.message || 'Unable to login.');
     }
@@ -28,11 +28,11 @@ export default function LoginPage({ onLogin, loading }) {
 
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-sm font-medium text-slate-200">Email</label>
+          <label className="block text-sm font-medium text-slate-200">Username</label>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
           />
         </div>
