@@ -16,9 +16,9 @@ const getStatus = (cutoffTime) => {
   return now.getTime() > cutoff.getTime() ? 'Closed' : 'Open';
 };
 
-const buildGoogleFormUrl = ({ fullName, amount, predictionId }) => {
+const buildGoogleFormUrl = ({ username, amount, predictionId }) => {
   const params = new URLSearchParams({
-    'entry.1999690954': fullName,
+    'entry.1999690954': username,
     'entry.1897096866': amount,
     'entry.1838227550': `PRED_${predictionId}`,
   });
@@ -65,7 +65,7 @@ export default function PaymentPage() {
     </svg>
   );
   const isClosed = status === 'Closed';
-  const displayName = username || 'Participant';
+  const usernameValue = username || 'Participant';
   const visibleUpiOptions = UPI_OPTIONS.slice(0, 10);
   const hasDisabledUpiOptions = visibleUpiOptions.some((optionItem) => !optionItem.enabled);
 
@@ -135,7 +135,7 @@ export default function PaymentPage() {
 
     try {
       await api.patch(`/predictions/${predictionId}/confirm`);
-      const formUrl = buildGoogleFormUrl({ fullName: displayName, amount, predictionId });
+      const formUrl = buildGoogleFormUrl({ username: usernameValue, amount, predictionId });
       setConfirmationMessage('Please submit payment proof in the next step.');
       setTimeout(() => {
         window.open(formUrl, '_blank');
