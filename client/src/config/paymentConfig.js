@@ -10,8 +10,6 @@ export const UPI_OPTIONS = [
   { label: 'UPI 8', id: 'UPI_8_PLACEHOLDER', enabled: false },
   { label: 'UPI 9', id: 'UPI_9_PLACEHOLDER', enabled: false },
   { label: 'UPI 10', id: 'UPI_10_PLACEHOLDER', enabled: false },
-  { label: 'UPI 11', id: 'UPI_11_PLACEHOLDER', enabled: false },
-  { label: 'UPI 12', id: 'UPI_12_PLACEHOLDER', enabled: false },
 ];
 
 export const GOOGLE_FORM_ID = '1FAIpQLScDJN0vNWIEvfDKUULxY_KMBJIJSjf7crYyXMDKVnYYW5NRNg';

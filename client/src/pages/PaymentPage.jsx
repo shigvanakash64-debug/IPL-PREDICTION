@@ -34,6 +34,7 @@ export default function PaymentPage() {
   const [confirmationMessage, setConfirmationMessage] = useState('');
   const [copyMessage, setCopyMessage] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState(null);
 
   const status = getStatus(cutoffTime);
 
@@ -54,10 +55,30 @@ export default function PaymentPage() {
       <rect x="8" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
+  const ScannerIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
+      <path d="M5 7V5a2 2 0 0 1 2-2h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M19 7V5a2 2 0 0 0-2-2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M5 17v2a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M19 17v2a2 2 0 0 1-2 2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 12a4 4 0 0 1-8 0 4 4 0 0 1 8 0Z" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
   const isClosed = status === 'Closed';
   const displayName = username || 'Participant';
-  const activeUpiOptions = UPI_OPTIONS.filter((optionItem) => optionItem.enabled);
-  const hasDisabledUpiOptions = UPI_OPTIONS.some((optionItem) => !optionItem.enabled);
+  const visibleUpiOptions = UPI_OPTIONS.slice(0, 10);
+  const hasDisabledUpiOptions = visibleUpiOptions.some((optionItem) => !optionItem.enabled);
+
+  const openScanner = (optionItem) => {
+    if (!optionItem?.id) return;
+    setScannerTarget(optionItem);
+    setShowScanner(true);
+  };
+
+  const closeScanner = () => {
+    setScannerTarget(null);
+    setShowScanner(false);
+  };
 
   if (!predictionId || !amount) {
     return (
@@ -155,47 +176,60 @@ export default function PaymentPage() {
 
         <div className="mt-8 space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Select UPI option</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {activeUpiOptions.map((optionItem) => (
-              <div key={optionItem.label} className="rounded-3xl border border-slate-700 bg-slate-800 p-3">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => payWithUpi(optionItem)}
-                    disabled={isClosed}
-                    className={`flex-1 rounded-3xl px-5 py-4 text-left text-sm font-semibold transition ${isClosed ? 'bg-slate-950 text-slate-500 cursor-not-allowed opacity-60' : 'bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700'}`}
-                  >
-                    <span>{optionItem.label}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      copyUpiId(optionItem.id);
-                    }}
-                    className="inline-flex h-12 w-12 items-center justify-center rounded-3xl border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-cyan-400 hover:text-white"
-                    title={`Copy ${optionItem.label}`}
-                  >
-                    <CopyIcon />
-                  </button>
-                </div>
-              </div>
-            ))}
+            <div className="grid gap-3">
+              {visibleUpiOptions.map((optionItem) => {
+                const isOptionDisabled = !optionItem.enabled;
+                return (
+                  <div key={optionItem.label} className="rounded-3xl border border-slate-700 bg-slate-800 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => payWithUpi(optionItem)}
+                        disabled={isClosed || isOptionDisabled}
+                        className={`flex-1 rounded-3xl px-5 py-4 text-left text-sm font-semibold transition ${isClosed || isOptionDisabled ? 'bg-slate-950 text-slate-500 cursor-not-allowed opacity-60' : 'bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700'}`}
+                      >
+                        <span>{optionItem.label}</span>
+                        {isOptionDisabled && <span className="block text-xs font-normal text-slate-400">Disabled until added</span>}
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            copyUpiId(optionItem.id);
+                          }}
+                          disabled={isOptionDisabled}
+                          className={`inline-flex h-12 w-12 items-center justify-center rounded-3xl border border-slate-700 bg-slate-900 text-slate-300 transition ${isOptionDisabled ? 'cursor-not-allowed opacity-50' : 'hover:border-cyan-400 hover:text-white'}`}
+                          title={isOptionDisabled ? 'UPI option not active yet' : `Copy ${optionItem.label}`}
+                        >
+                          <CopyIcon />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openScanner(optionItem);
+                          }}
+                          disabled={isOptionDisabled}
+                          className={`inline-flex h-12 w-12 items-center justify-center rounded-3xl border border-slate-700 bg-slate-900 text-slate-300 transition ${isOptionDisabled ? 'cursor-not-allowed opacity-50' : 'hover:border-cyan-400 hover:text-white'}`}
+                          title={isOptionDisabled ? 'Scanner not available yet' : `Open scanner for ${optionItem.label}`}
+                        >
+                          <ScannerIcon />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {copyMessage && <p className="text-sm text-emerald-300">{copyMessage}</p>}
+            </div>
+            {hasDisabledUpiOptions && (
+              <p className="mt-3 text-sm text-slate-400">Some UPI options are not active yet. Use an enabled option and copy/scan from its row.</p>
+            )}
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowScanner(true)}
-              className="inline-flex items-center justify-center rounded-3xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyan-400 hover:bg-cyan-700"
-            >
-              Open scanner
-            </button>
-            {copyMessage && <p className="text-sm text-emerald-300">{copyMessage}</p>}
-          </div>
-          {hasDisabledUpiOptions && (
-            <p className="mt-3 text-sm text-slate-400">Only the active UPI option above can be used right now. Other options are disabled until they are added.</p>
-          )}
-        </div>
 
         {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
         {confirmationMessage && <p className="mt-4 text-sm text-emerald-300">{confirmationMessage}</p>}
@@ -212,28 +246,34 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {showScanner && (
+      {showScanner && scannerTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4">
           <div className="relative w-full max-w-xl rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
             <button
               type="button"
-              onClick={() => setShowScanner(false)}
+              onClick={closeScanner}
               className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-slate-700"
             >
               <span className="text-lg font-bold">×</span>
             </button>
-            <h2 className="text-lg font-semibold text-white">Scan payment code</h2>
-            <p className="mt-2 text-sm text-slate-400">Open this scanner view to preview the QR/scan interface.</p>
+            <h2 className="text-lg font-semibold text-white">Scanner preview</h2>
+            <p className="mt-2 text-sm text-slate-400">Scan this code from your UPI app to pay to <span className="font-semibold text-white">{scannerTarget.label}</span>.</p>
             <div className="mt-6 flex justify-center">
               <div className="relative h-72 w-72 rounded-[28px] border-4 border-cyan-500 bg-slate-950 p-4">
                 <div className="absolute left-4 top-4 h-10 w-10 border-t-4 border-l-4 border-cyan-400" />
                 <div className="absolute right-4 top-4 h-10 w-10 border-t-4 border-r-4 border-cyan-400" />
                 <div className="absolute left-4 bottom-4 h-10 w-10 border-b-4 border-l-4 border-cyan-400" />
                 <div className="absolute right-4 bottom-4 h-10 w-10 border-b-4 border-r-4 border-cyan-400" />
-                <div className="absolute inset-10 rounded-2xl border border-slate-700 bg-slate-900" />
+                <div className="absolute inset-10 rounded-2xl border border-slate-700 bg-slate-900 p-4">
+                  <p className="text-center text-sm text-slate-400">Scanner view for:</p>
+                  <p className="mt-4 text-center text-base font-semibold text-white">{scannerTarget.label}</p>
+                  <p className="mt-2 text-center text-sm text-slate-500">Amount ₹{amount}</p>
+                  <p className="mt-3 text-center text-xs uppercase tracking-[0.35em] text-slate-500">Payment note</p>
+                  <p className="text-center text-sm font-semibold text-white">PRED_{predictionId}</p>
+                </div>
               </div>
             </div>
-            <p className="mt-4 text-center text-sm text-slate-400">This is a scanner preview. Use your phone camera or UPI scanner app to scan the actual QR code.</p>
+            <p className="mt-4 text-center text-sm text-slate-400">This is a scanner preview. Use your camera app or UPI scanner to complete payment.</p>
           </div>
         </div>
       )}
