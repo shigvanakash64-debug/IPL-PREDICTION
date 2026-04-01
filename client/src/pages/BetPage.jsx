@@ -46,6 +46,10 @@ export default function BetPage() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState('');
 
+  const presetAmounts = [10, 20, 50, 100];
+  const allowedAmount = 10;
+  const isAmountAllowed = (value) => Number(value) === allowedAmount;
+
   const status = useMemo(() => getStatus(cutoffTime), [cutoffTime]);
   const isClosed = status === 'Closed';
 
@@ -72,12 +76,22 @@ export default function BetPage() {
     );
   }
 
+  const handleSelectAmount = (value) => {
+    setError('');
+    setAmount(String(value));
+  };
+
   const handleSubmit = async () => {
     setError('');
 
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
       setError('Enter a valid amount greater than zero.');
+      return;
+    }
+
+    if (!isAmountAllowed(numericAmount)) {
+      setError(`For now only ₹${allowedAmount} is allowed. Please select ₹${allowedAmount}.`);
       return;
     }
 
@@ -142,6 +156,28 @@ export default function BetPage() {
               className="mt-3 w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </label>
+
+          <div className="grid gap-3 sm:grid-cols-4">
+            {presetAmounts.map((preset) => {
+              const isSelected = Number(amount) === preset;
+              const isLocked = preset !== allowedAmount;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleSelectAmount(preset)}
+                  disabled={isClosed}
+                  className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${isSelected ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'} ${isLocked ? 'opacity-70' : ''}`}
+                >
+                  ₹{preset} {isLocked ? 'soon' : ''}
+                </button>
+              );
+            })}
+          </div>
+
+          {!isAmountAllowed(amount) && amount ? (
+            <p className="text-sm text-yellow-300">Only ₹{allowedAmount} is active for now. The other amounts will be available later.</p>
+          ) : null}
 
           {error && <p className="text-sm text-rose-400">{error}</p>}
 
