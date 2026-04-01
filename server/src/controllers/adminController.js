@@ -1,6 +1,7 @@
 const Question = require('../models/Question');
 const Prediction = require('../models/Prediction');
 const { parseISTDateTimeLocal, getNext630PMIST } = require('../utils/timeUtils');
+const { syncApprovedPrediction } = require('../services/googleSheetsService');
 
 const createQuestion = async (req, res) => {
   try {
@@ -57,7 +58,24 @@ const deleteQuestion = async (req, res) => {
 
 const listPredictions = async (req, res) => {
   try {
-    const predictions = await Prediction.find({ paymentStatus: 'pending' })
+    const { status, search } = req.query;
+    const query = {};
+
+    if (!status || status === 'pending') {
+      query.paymentStatus = 'pending';
+    } else if (status !== 'all') {
+      query.paymentStatus = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { username: new RegExp(search, 'i') },
+        { _id: new RegExp(search, 'i') },
+        { paymentNote: new RegExp(search, 'i') },
+      ];
+    }
+
+    const predictions = await Prediction.find(query)
       .sort({ createdAt: -1 })
       .select('userId username matchId questionType selectedOption amount paymentStatus paymentNote createdAt');
 
@@ -93,4 +111,42 @@ const updatePredictionStatus = async (req, res) => {
   }
 };
 
-module.exports = { createQuestion, getQuestions, deleteQuestion, listPredictions, updatePredictionStatus };
+const approvePrediction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prediction = await Prediction.findById(id);
+    if (!prediction) {
+      return res.status(404).json({ error: 'Prediction not found' });
+    }
+
+    prediction.paymentStatus = 'paid';
+    prediction.paymentNote = prediction.paymentNote || `PRED_${prediction._id}`;
+    await prediction.save();
+
+    const synced = await syncApprovedPrediction(prediction);
+    return res.status(200).json({ success: true, prediction, sheetSynced: synced });
+  } catch (error) {
+    console.error('approvePrediction error:', error);
+    return res.status(500).json({ error: 'Unable to approve prediction' });
+  }
+};
+
+const rejectPrediction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prediction = await Prediction.findById(id);
+    if (!prediction) {
+      return res.status(404).json({ error: 'Prediction not found' });
+    }
+
+    prediction.paymentStatus = 'rejected';
+    await prediction.save();
+
+    return res.status(200).json({ success: true, prediction });
+  } catch (error) {
+    console.error('rejectPrediction error:', error);
+    return res.status(500).json({ error: 'Unable to reject prediction' });
+  }
+};
+
+module.exports = { createQuestion, getQuestions, deleteQuestion, listPredictions, updatePredictionStatus, approvePrediction, rejectPrediction };

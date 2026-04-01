@@ -1,3 +1,5 @@
+const https = require('https');
+const { URL } = require('url');
 const { google } = require('googleapis');
 
 const loadCredentials = () => {
@@ -105,4 +107,67 @@ const appendPredictionRow = async ({ username, matchId, questionType, selectedOp
   }
 };
 
-module.exports = { appendRequestRow, fetchRequestRows, appendPredictionRow };
+const postJsonToWebhook = async (webhookUrl, payload) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const parsedUrl = new URL(webhookUrl);
+      const body = JSON.stringify(payload);
+      const requestOptions = {
+        method: 'POST',
+        hostname: parsedUrl.hostname,
+        path: `${parsedUrl.pathname}${parsedUrl.search}`,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      };
+
+      const request = https.request(requestOptions, (response) => {
+        let responseBody = '';
+        response.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+        response.on('end', () => {
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            return resolve(true);
+          }
+          return reject(new Error(`Webhook sync failed with status ${response.statusCode}: ${responseBody}`));
+        });
+      });
+
+      request.on('error', (err) => reject(err));
+      request.write(body);
+      request.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+const syncApprovedPrediction = async ({ username, questionType, selectedOption, amount, _id, paymentNote, paymentStatus }) => {
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn('Missing GOOGLE_SHEETS_WEBHOOK_URL environment variable. Skipping approved payment sync.');
+    return false;
+  }
+
+  const payload = {
+    username,
+    questionType,
+    selectedOption,
+    amount,
+    predictionId: _id,
+    note: paymentNote || `PRED_${_id}`,
+    status: paymentStatus || 'paid',
+  };
+
+  try {
+    await postJsonToWebhook(webhookUrl, payload);
+    return true;
+  } catch (error) {
+    console.error('syncApprovedPrediction error:', error.message || error);
+    return false;
+  }
+};
+
+module.exports = { appendRequestRow, fetchRequestRows, appendPredictionRow, syncApprovedPrediction };

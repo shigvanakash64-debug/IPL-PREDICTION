@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function AdminPanel({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
@@ -94,7 +95,14 @@ export default function AdminPanel({ authUser, onLogout, api }) {
           <p className="mt-2 text-sm text-slate-400">Create and manage prediction questions.</p>
         </div>
 
-        <button
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/admin/payments"
+            className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+          >
+            Review payments
+          </Link>
+          <button
           type="button"
           onClick={onLogout}
           className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"

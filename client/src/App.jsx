@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminPanel from './pages/AdminPanel';
+import AdminPayments from './pages/AdminPayments';
 import BetPage from './pages/BetPage';
 import PaymentPage from './pages/PaymentPage';
 import ConfirmationPage from './pages/ConfirmationPage';
@@ -129,6 +130,10 @@ function App() {
             <Route
               path="/admin"
               element={authUser ? (authUser.role === 'admin' ? <AdminPanel authUser={authUser} onLogout={handleLogout} api={api} /> : <Navigate to="/dashboard" />) : <Navigate to="/login" />}
+            />
+            <Route
+              path="/admin/payments"
+              element={authUser ? (authUser.role === 'admin' ? <AdminPayments authUser={authUser} onLogout={handleLogout} api={api} /> : <Navigate to="/dashboard" />) : <Navigate to="/login" />}
             />
             <Route
               path="/bet"
