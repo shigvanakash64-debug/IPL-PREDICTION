@@ -103,12 +103,13 @@ export default function AdminPanel({ authUser, onLogout, api }) {
             Review payments
           </Link>
           <button
-          type="button"
-          onClick={onLogout}
-          className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-        >
-          Logout
-        </button>
+            type="button"
+            onClick={onLogout}
+            className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
