@@ -1,11 +1,23 @@
 const Question = require('../models/Question');
 const { getNext630PMIST, isAfterIST } = require('../utils/timeUtils');
 
+const deriveQuestionTypeByText = (text) => {
+  if (!text || typeof text !== 'string') return 'match';
+  const normalized = text.toLowerCase();
+  if (normalized.includes('toss')) return 'toss';
+  if (normalized.includes('match')) return 'match';
+  return 'match';
+};
+
 const normalizeQuestion = (question) => {
   const safeQuestion = question.toObject ? question.toObject() : question;
   const cutoffTime = safeQuestion.cutoffTime || getNext630PMIST();
+  const questionType = safeQuestion.questionType && ['toss', 'match'].includes(safeQuestion.questionType)
+    ? safeQuestion.questionType
+    : deriveQuestionTypeByText(safeQuestion.text);
   return {
     ...safeQuestion,
+    questionType,
     cutoffTime,
     status: isAfterIST(cutoffTime) ? 'Closed' : 'Open',
   };

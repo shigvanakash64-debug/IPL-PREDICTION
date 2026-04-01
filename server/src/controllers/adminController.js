@@ -3,6 +3,14 @@ const Prediction = require('../models/Prediction');
 const { parseISTDateTimeLocal, getNext630PMIST } = require('../utils/timeUtils');
 const { syncApprovedPrediction } = require('../services/googleSheetsService');
 
+const deriveQuestionTypeByText = (text) => {
+  if (!text || typeof text !== 'string') return 'match';
+  const normalized = text.toLowerCase();
+  if (normalized.includes('toss')) return 'toss';
+  if (normalized.includes('match')) return 'match';
+  return 'match';
+};
+
 const createQuestion = async (req, res) => {
   try {
     const { text, option1, option2, cutoffTime } = req.body;
@@ -15,10 +23,12 @@ const createQuestion = async (req, res) => {
       return res.status(400).json({ error: 'Invalid cutoff time' });
     }
 
+    const questionType = deriveQuestionTypeByText(text);
     const question = new Question({
       text: text.trim(),
       options: [option1.trim(), option2.trim()],
       cutoffTime: cutoffDate,
+      questionType,
       createdBy: req.user._id,
     });
     await question.save();
@@ -33,7 +43,16 @@ const createQuestion = async (req, res) => {
 const getQuestions = async (req, res) => {
   try {
     const questions = await Question.find().populate('createdBy', 'name username');
-    return res.status(200).json({ questions });
+    const normalizedQuestions = questions.map((question) => {
+      const questionType = question.questionType && ['toss', 'match'].includes(question.questionType)
+        ? question.questionType
+        : deriveQuestionTypeByText(question.text);
+      return {
+        ...(question.toObject ? question.toObject() : question),
+        questionType,
+      };
+    });
+    return res.status(200).json({ questions: normalizedQuestions });
   } catch (error) {
     console.error('getQuestions error:', error);
     return res.status(500).json({ error: 'Unable to load questions' });

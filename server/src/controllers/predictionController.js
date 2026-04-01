@@ -3,6 +3,14 @@ const Prediction = require('../models/Prediction');
 const { appendPredictionRow } = require('../services/googleSheetsService');
 const { isAfterIST, getNext630PMIST } = require('../utils/timeUtils');
 
+const deriveQuestionTypeByText = (text) => {
+  if (!text || typeof text !== 'string') return 'match';
+  const normalized = text.toLowerCase();
+  if (normalized.includes('toss')) return 'toss';
+  if (normalized.includes('match')) return 'match';
+  return 'match';
+};
+
 const listUserPredictions = async (req, res) => {
   try {
     const predictions = await Prediction.find({ userId: req.user._id }).select('matchId questionType selectedOption amount paymentStatus createdAt');
@@ -21,7 +29,7 @@ const createPrediction = async (req, res) => {
       return res.status(400).json({ error: 'Question ID and option are required' });
     }
 
-    const question = await Question.findById(questionId).select('options questionType cutoffTime');
+    const question = await Question.findById(questionId).select('options questionType cutoffTime text');
     if (!question) {
       return res.status(404).json({ error: 'Question not found' });
     }
@@ -35,7 +43,7 @@ const createPrediction = async (req, res) => {
       return res.status(400).json({ error: 'Selected option is not valid for this question' });
     }
 
-    const questionType = question.questionType || 'match';
+    const questionType = deriveQuestionTypeByText(question.text);
 
     const existingPrediction = await Prediction.findOne({
       userId: req.user._id,
