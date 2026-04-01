@@ -49,13 +49,19 @@ export default function PaymentPage() {
     );
   }
 
-  const payWithUpi = (upiId) => {
+  const payWithUpi = (optionItem) => {
     setError('');
     if (isClosed) {
       setError('Prediction is closed. Payment is no longer allowed.');
       return;
     }
 
+    if (!optionItem?.enabled) {
+      setError('This UPI option is not active yet. Please use the active option above.');
+      return;
+    }
+
+    const upiId = optionItem.id;
     if (!upiId) {
       setError('Invalid UPI option selected. Please choose another option.');
       return;
@@ -132,11 +138,12 @@ export default function PaymentPage() {
               <button
                 key={optionItem.label}
                 type="button"
-                onClick={() => payWithUpi(optionItem.id)}
-                disabled={isClosed}
-                className="rounded-3xl border border-slate-700 bg-slate-800 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyan-400 hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => payWithUpi(optionItem)}
+                disabled={isClosed || !optionItem.enabled}
+                className={`rounded-3xl px-5 py-4 text-sm font-semibold transition ${optionItem.enabled ? 'border border-slate-700 bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700' : 'border border-slate-800 bg-slate-950 text-slate-500 cursor-not-allowed opacity-60'}`}
               >
-                {optionItem.label}
+                <span>{optionItem.label}</span>
+                {!optionItem.enabled && <span className="block text-xs font-normal text-slate-500">Coming soon</span>}
               </button>
             ))}
           </div>
