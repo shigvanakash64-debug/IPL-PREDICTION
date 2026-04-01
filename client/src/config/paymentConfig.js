@@ -1,6 +1,6 @@
 export const UPI_NAME = 'Akash';
 export const UPI_OPTIONS = [
-  { label: '8261047808@mbk' },
+  { label: '8261047808@mbk', id: '8261047808@mbk' },
   { label: 'UPI 2', id: '8261047808@mbk' },
   { label: 'UPI 3', id: 'upi3@bank' },
   { label: 'UPI 4', id: 'upi4@bank' },

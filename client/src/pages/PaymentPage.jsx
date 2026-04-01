@@ -56,6 +56,11 @@ export default function PaymentPage() {
       return;
     }
 
+    if (!upiId) {
+      setError('Invalid UPI option selected. Please choose another option.');
+      return;
+    }
+
     const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`PRED_${predictionId}`)}`;
     window.location.href = upiLink;
   };
