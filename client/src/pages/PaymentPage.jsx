@@ -36,6 +36,8 @@ export default function PaymentPage() {
   const status = getStatus(cutoffTime);
   const isClosed = status === 'Closed';
   const displayName = username || 'Participant';
+  const activeUpiOptions = UPI_OPTIONS.filter((optionItem) => optionItem.enabled);
+  const hasDisabledUpiOptions = UPI_OPTIONS.some((optionItem) => !optionItem.enabled);
 
   if (!predictionId || !amount) {
     return (
@@ -134,19 +136,21 @@ export default function PaymentPage() {
         <div className="mt-8 space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Select UPI option</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {UPI_OPTIONS.map((optionItem) => (
+            {activeUpiOptions.map((optionItem) => (
               <button
                 key={optionItem.label}
                 type="button"
                 onClick={() => payWithUpi(optionItem)}
-                disabled={isClosed || !optionItem.enabled}
-                className={`rounded-3xl px-5 py-4 text-sm font-semibold transition ${optionItem.enabled ? 'border border-slate-700 bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700' : 'border border-slate-800 bg-slate-950 text-slate-500 cursor-not-allowed opacity-60'}`}
+                disabled={isClosed}
+                className={`rounded-3xl px-5 py-4 text-sm font-semibold transition ${isClosed ? 'border border-slate-800 bg-slate-950 text-slate-500 cursor-not-allowed opacity-60' : 'border border-slate-700 bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700'}`}
               >
                 <span>{optionItem.label}</span>
-                {!optionItem.enabled && <span className="block text-xs font-normal text-slate-500">Coming soon</span>}
               </button>
             ))}
           </div>
+          {hasDisabledUpiOptions && (
+            <p className="mt-3 text-sm text-slate-400">Only the active UPI option above can be used right now. Other options are disabled until they are added.</p>
+          )}
         </div>
 
         {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
