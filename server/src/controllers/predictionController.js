@@ -61,7 +61,7 @@ const createPrediction = async (req, res) => {
       return res.status(403).json({ error: 'Prediction cutoff has passed' });
     }
 
-    const validOptions = (question.options || []).slice(0, 2);
+    const validOptions = question.options || [];
     if (!validOptions.includes(option)) {
       return res.status(400).json({ error: 'Selected option is not valid for this question' });
     }
