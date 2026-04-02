@@ -13,9 +13,18 @@ const deriveQuestionTypeByText = (text) => {
 
 const createQuestion = async (req, res) => {
   try {
-    const { text, option1, option2, cutoffTime } = req.body;
-    if (!text || !option1 || !option2) {
-      return res.status(400).json({ error: 'Question text and two options are required' });
+    const { text, options, cutoffTime } = req.body;
+    const rawOptions = Array.isArray(options) ? options : [];
+    const cleanedOptions = rawOptions
+      .map((option) => (typeof option === 'string' ? option.trim() : ''))
+      .filter((option) => option);
+
+    if (!text || cleanedOptions.length < 2) {
+      return res.status(400).json({ error: 'Question text and at least two options are required' });
+    }
+
+    if (cleanedOptions.length > 5) {
+      return res.status(400).json({ error: 'A question can have at most five options' });
     }
 
     const cutoffDate = cutoffTime ? parseISTDateTimeLocal(cutoffTime) : getNext630PMIST();
@@ -26,7 +35,7 @@ const createQuestion = async (req, res) => {
     const questionType = deriveQuestionTypeByText(text);
     const question = new Question({
       text: text.trim(),
-      options: [option1.trim(), option2.trim()],
+      options: cleanedOptions,
       cutoffTime: cutoffDate,
       questionType,
       createdBy: req.user._id,
@@ -50,7 +59,7 @@ const getQuestions = async (req, res) => {
       const questionObj = question.toObject ? question.toObject() : question;
       return {
         ...questionObj,
-        options: (questionObj.options || []).slice(0, 2),
+        options: questionObj.options || [],
         questionType,
       };
     });

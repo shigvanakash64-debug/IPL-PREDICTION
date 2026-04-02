@@ -4,8 +4,7 @@ import { Link } from 'react-router-dom';
 export default function AdminPanel({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
   const [text, setText] = useState('');
-  const [option1, setOption1] = useState('');
-  const [option2, setOption2] = useState('');
+  const [options, setOptions] = useState(['', '']);
   const [loading, setLoading] = useState(true);
   const [predictionsLoading, setPredictionsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,19 +55,24 @@ export default function AdminPanel({ authUser, onLogout, api }) {
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    if (!text || !option1 || !option2) {
-      setError('All fields are required.');
+    const cleanedOptions = options.map((option) => option.trim()).filter(Boolean);
+    if (!text || cleanedOptions.length < 2) {
+      setError('Question text and at least two options are required.');
+      return;
+    }
+
+    if (cleanedOptions.length > 5) {
+      setError('A question can have at most five options.');
       return;
     }
 
     setSaving(true);
     setError('');
     try {
-      const response = await api.post('/admin/question', { text, option1, option2 });
+      const response = await api.post('/admin/question', { text, options: cleanedOptions });
       setQuestions((current) => [response.data.question, ...current]);
       setText('');
-      setOption1('');
-      setOption2('');
+      setOptions(['', '']);
     } catch (err) {
       setError(err?.response?.data?.error || 'Unable to create question.');
     } finally {
@@ -115,7 +119,7 @@ export default function AdminPanel({ authUser, onLogout, api }) {
       <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow">
           <h2 className="text-xl font-semibold text-white">Create question</h2>
-          <p className="mt-2 text-sm text-slate-400">Add a new two-option match prediction.</p>
+          <p className="mt-2 text-sm text-slate-400">Add a new question with 2 to 5 options.</p>
 
           <form className="mt-6 space-y-4" onSubmit={handleCreate}>
             <div>
@@ -126,22 +130,36 @@ export default function AdminPanel({ authUser, onLogout, api }) {
                 className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Option 1</label>
-              <input
-                value={option1}
-                onChange={(e) => setOption1(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Option 2</label>
-              <input
-                value={option2}
-                onChange={(e) => setOption2(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
-              />
-            </div>
+            {options.map((optionValue, index) => (
+              <div key={index}>
+                <label className="block text-sm font-medium text-slate-200">Option {index + 1}</label>
+                <div className="mt-2 flex gap-3">
+                  <input
+                    value={optionValue}
+                    onChange={(e) => setOptions((current) => current.map((item, idx) => idx === index ? e.target.value : item))}
+                    className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
+                  />
+                  {options.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setOptions((current) => current.filter((_, idx) => idx !== index))}
+                      className="inline-flex h-12 items-center rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-400"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {options.length < 5 && (
+              <button
+                type="button"
+                onClick={() => setOptions((current) => [...current, ''])}
+                className="rounded-2xl bg-slate-800 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+              >
+                Add option
+              </button>
+            )}
 
             {error && <p className="text-sm text-rose-400">{error}</p>}
 

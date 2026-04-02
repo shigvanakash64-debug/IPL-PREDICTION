@@ -6,8 +6,8 @@ const questionSchema = new mongoose.Schema({
   options: {
     type: [{ type: String, required: true, trim: true }],
     validate: {
-      validator: (arr) => Array.isArray(arr) && arr.length === 2,
-      message: 'A question must have exactly two options',
+      validator: (arr) => Array.isArray(arr) && arr.length >= 2 && arr.length <= 5,
+      message: 'A question must have between 2 and 5 options',
     },
   },
   questionType: { type: String, enum: ['toss', 'match'], default: 'match' },

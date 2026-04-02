@@ -188,7 +188,7 @@ const getPredictionById = async (req, res) => {
     const question = await Question.findById(prediction.matchId).select('text options questionType cutoffTime');
     if (question) {
       const questionObj = question.toObject ? question.toObject() : question;
-      questionObj.options = (questionObj.options || []).slice(0, 2);
+      questionObj.options = questionObj.options || [];
       return res.status(200).json({ prediction, question: questionObj });
     }
     return res.status(200).json({ prediction, question });
