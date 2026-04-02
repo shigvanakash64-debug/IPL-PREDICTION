@@ -49,6 +49,11 @@ export default function PaymentPage() {
     setTimeout(() => setCopyMessage(''), 3000);
   };
 
+  const getScannerQrUrl = (upiId) => {
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`PRED_${predictionId}`)}`;
+    return `https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=${encodeURIComponent(upiLink)}&chld=L|1`;
+  };
+
   const CopyIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
       <path d="M9 4H6C4.895 4 4 4.895 4 6V17C4 18.105 4.895 19 6 19H17C18.105 19 19 18.105 19 17V14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -259,22 +264,22 @@ export default function PaymentPage() {
             <h2 className="text-lg font-semibold text-white">Scanner preview</h2>
             <p className="mt-2 text-sm text-slate-400">Scan this code from your UPI app to pay to <span className="font-semibold text-white">{scannerTarget.label}</span>.</p>
             <p className="mt-1 text-sm text-slate-400">UPI ID: <span className="font-semibold text-white">{scannerTarget.id}</span></p>
-            <div className="mt-6 flex justify-center">
-              <div className="relative h-72 w-72 rounded-[28px] border-4 border-cyan-500 bg-slate-950 p-4">
-                <div className="absolute left-4 top-4 h-10 w-10 border-t-4 border-l-4 border-cyan-400" />
-                <div className="absolute right-4 top-4 h-10 w-10 border-t-4 border-r-4 border-cyan-400" />
-                <div className="absolute left-4 bottom-4 h-10 w-10 border-b-4 border-l-4 border-cyan-400" />
-                <div className="absolute right-4 bottom-4 h-10 w-10 border-b-4 border-r-4 border-cyan-400" />
-                <div className="absolute inset-10 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                  <p className="text-center text-sm text-slate-400">Scanner view for:</p>
-                  <p className="mt-4 text-center text-base font-semibold text-white">{scannerTarget.label}</p>
-                  <p className="mt-2 text-center text-sm text-slate-500">Amount ₹{amount}</p>
-                  <p className="mt-3 text-center text-xs uppercase tracking-[0.35em] text-slate-500">Payment note</p>
-                  <p className="text-center text-sm font-semibold text-white">PRED_{predictionId}</p>
-                </div>
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <img
+                src={getScannerQrUrl(scannerTarget.id)}
+                alt={`QR code for ${scannerTarget.label}`}
+                className="h-72 w-72 rounded-3xl border border-slate-700 bg-slate-950 object-cover"
+              />
+              <div className="w-full rounded-3xl border border-slate-700 bg-slate-900 p-4 text-center">
+                <p className="text-sm text-slate-400">Scanner preview for:</p>
+                <p className="mt-2 text-base font-semibold text-white">{scannerTarget.label}</p>
+                <p className="mt-2 text-sm text-slate-400">Amount ₹{amount}</p>
+                <p className="mt-3 text-xs uppercase tracking-[0.35em] text-slate-500">Payment note</p>
+                <p className="text-sm font-semibold text-white">PRED_{predictionId}</p>
+                <p className="mt-3 text-xs text-slate-500">If the QR does not scan, use the UPI ID shown above.</p>
               </div>
             </div>
-            <p className="mt-4 text-center text-sm text-slate-400">This is a scanner preview. Use your camera app or UPI scanner to complete payment.</p>
+            <p className="mt-4 text-center text-sm text-slate-400">Scan this code with your UPI app, or copy the UPI ID shown above.</p>
           </div>
         </div>
       )}
