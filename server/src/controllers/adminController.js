@@ -47,8 +47,10 @@ const getQuestions = async (req, res) => {
       const questionType = question.questionType && ['toss', 'match'].includes(question.questionType)
         ? question.questionType
         : deriveQuestionTypeByText(question.text);
+      const questionObj = question.toObject ? question.toObject() : question;
       return {
-        ...(question.toObject ? question.toObject() : question),
+        ...questionObj,
+        options: (questionObj.options || []).slice(0, 2),
         questionType,
       };
     });

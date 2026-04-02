@@ -61,7 +61,8 @@ const createPrediction = async (req, res) => {
       return res.status(403).json({ error: 'Prediction cutoff has passed' });
     }
 
-    if (!question.options.includes(option)) {
+    const validOptions = (question.options || []).slice(0, 2);
+    if (!validOptions.includes(option)) {
       return res.status(400).json({ error: 'Selected option is not valid for this question' });
     }
 
@@ -185,6 +186,11 @@ const getPredictionById = async (req, res) => {
     }
 
     const question = await Question.findById(prediction.matchId).select('text options questionType cutoffTime');
+    if (question) {
+      const questionObj = question.toObject ? question.toObject() : question;
+      questionObj.options = (questionObj.options || []).slice(0, 2);
+      return res.status(200).json({ prediction, question: questionObj });
+    }
     return res.status(200).json({ prediction, question });
   } catch (error) {
     console.error('getPredictionById error:', error);
