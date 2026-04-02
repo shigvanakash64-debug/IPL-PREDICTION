@@ -2,8 +2,8 @@ export const UPI_NAME = 'Akash';
 export const UPI_OPTIONS = [
   { label: '8261047808@mbk', id: '8261047808@mbk', enabled: true },
   { label: '7900003632@kotakbank', id: '7900003632@kotakbank', enabled: true },
-  { label: 'UPI 3', id: 'UPI_3_PLACEHOLDER', enabled: false },
-  { label: 'UPI 4', id: 'UPI_4_PLACEHOLDER', enabled: false },
+  { label: '8261047808@fam', id: '8261047808@fam', enabled: true },
+  { label: 'gauravpardule@fam', id: 'gauravpardule@fam', enabled: true },
   { label: 'UPI 5', id: 'UPI_5_PLACEHOLDER', enabled: false },
   { label: 'UPI 6', id: 'UPI_6_PLACEHOLDER', enabled: false },
   { label: 'UPI 7', id: 'UPI_7_PLACEHOLDER', enabled: false },
