@@ -228,6 +228,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
               </section>
             )}
           </>
+        )}
       </section>
     </div>
   );
