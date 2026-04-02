@@ -30,6 +30,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submittingQuestion, setSubmittingQuestion] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -88,6 +89,8 @@ export default function UserDashboard({ authUser, onLogout, api }) {
     return acc;
   }, {});
 
+  const historyItems = predictions.filter((prediction) => prediction.paymentStatus === 'paid');
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="flex flex-col gap-3 rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow sm:flex-row sm:items-center sm:justify-between">
@@ -112,7 +115,16 @@ export default function UserDashboard({ authUser, onLogout, api }) {
             <h2 className="text-xl font-semibold text-white">Questions</h2>
             <p className="mt-1 text-sm text-slate-400">See the latest match predictions available to users.</p>
           </div>
-          <div className="rounded-2xl bg-slate-950 px-4 py-3 text-sm text-slate-300">Role: {authUser.role}</div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl bg-slate-950 px-4 py-3 text-sm text-slate-300">Role: {authUser.role}</div>
+            <button
+              type="button"
+              onClick={() => setShowHistory((prev) => !prev)}
+              className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+            >
+              {showHistory ? 'Hide history' : 'Show history'}
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -122,8 +134,9 @@ export default function UserDashboard({ authUser, onLogout, api }) {
         ) : questions.length === 0 ? (
           <p className="mt-6 text-slate-400">No questions have been created yet.</p>
         ) : (
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {questions.map((question) => {
+          <>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {questions.map((question) => {
               const existingPrediction = predictionByQuestion[question._id];
               const isSubmitting = submittingQuestion === question._id;
               const status = question.status || getQuestionStatus(question.cutoffTime);
@@ -182,8 +195,39 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+
+            {showHistory && (
+              <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">History</h2>
+                    <p className="mt-1 text-sm text-slate-400">Approved payment history from admin review.</p>
+                  </div>
+                  <span className="rounded-2xl bg-emerald-950/80 px-4 py-3 text-sm text-emerald-300">{historyItems.length} approved record(s)</span>
+                </div>
+
+                {historyItems.length === 0 ? (
+                  <p className="mt-6 text-slate-400">No approved history yet. Once an admin approves your payment, it will appear here.</p>
+                ) : (
+                  <div className="mt-6 space-y-4">
+                    {historyItems.map((item) => (
+                      <div key={item._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+                        <p className="text-sm text-slate-400">
+                          {item.historyMessage || `You win this prediction between ${item.questionText || 'your selected match'}, amount - ${item.amount || 0}`}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          <span>Match: {item.questionText || 'Unknown match'}</span>
+                          <span>Amount: ₹{item.amount || 0}</span>
+                          <span>Approved on: {new Date(item.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </>
       </section>
     </div>
   );

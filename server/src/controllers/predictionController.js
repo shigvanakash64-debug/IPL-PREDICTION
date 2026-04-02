@@ -13,8 +13,30 @@ const deriveQuestionTypeByText = (text) => {
 
 const listUserPredictions = async (req, res) => {
   try {
-    const predictions = await Prediction.find({ userId: req.user._id }).select('matchId questionType selectedOption amount paymentStatus createdAt');
-    return res.status(200).json({ predictions });
+    const predictions = await Prediction.find({ userId: req.user._id })
+      .select('matchId questionType selectedOption amount paymentStatus createdAt')
+      .lean();
+
+    const questionIds = predictions.map((prediction) => prediction.matchId).filter(Boolean);
+    const questions = await Question.find({ _id: { $in: questionIds } }).select('text');
+    const questionById = questions.reduce((map, question) => {
+      map[question._id.toString()] = question;
+      return map;
+    }, {});
+
+    const predictionsWithHistory = predictions.map((prediction) => {
+      const question = questionById[prediction.matchId] || {};
+      return {
+        ...prediction,
+        questionText: question.text || '',
+        historyMessage:
+          prediction.paymentStatus === 'paid'
+            ? `You win this prediction between ${question.text || 'your selected match'}, amount - ${prediction.amount || 0}`
+            : undefined,
+      };
+    });
+
+    return res.status(200).json({ predictions: predictionsWithHistory });
   } catch (error) {
     console.error('listUserPredictions error:', error);
     return res.status(500).json({ error: 'Unable to load user predictions' });

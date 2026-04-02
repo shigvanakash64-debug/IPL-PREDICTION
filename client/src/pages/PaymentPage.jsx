@@ -258,6 +258,7 @@ export default function PaymentPage() {
             </button>
             <h2 className="text-lg font-semibold text-white">Scanner preview</h2>
             <p className="mt-2 text-sm text-slate-400">Scan this code from your UPI app to pay to <span className="font-semibold text-white">{scannerTarget.label}</span>.</p>
+            <p className="mt-1 text-sm text-slate-400">UPI ID: <span className="font-semibold text-white">{scannerTarget.id}</span></p>
             <div className="mt-6 flex justify-center">
               <div className="relative h-72 w-72 rounded-[28px] border-4 border-cyan-500 bg-slate-950 p-4">
                 <div className="absolute left-4 top-4 h-10 w-10 border-t-4 border-l-4 border-cyan-400" />
