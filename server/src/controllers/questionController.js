@@ -3,7 +3,7 @@ const { getNext630PMIST, isAfterIST } = require('../utils/timeUtils');
 
 const listQuestions = async (req, res) => {
   try {
-    const questions = await Question.find({ status: 'active' }).select('text options pools status createdAt');
+    const questions = await Question.find({ status: 'active' }).select('text options pools status createdAt cutoffTime');
     return res.status(200).json({ questions });
   } catch (error) {
     console.error('listQuestions error:', error);
@@ -13,7 +13,7 @@ const listQuestions = async (req, res) => {
 
 const getQuestion = async (req, res) => {
   try {
-    const question = await Question.findById(req.params.id).select('text options pools status createdAt');
+    const question = await Question.findById(req.params.id).select('text options pools status createdAt cutoffTime');
     if (!question) {
       return res.status(404).json({ error: 'Question not found' });
     }

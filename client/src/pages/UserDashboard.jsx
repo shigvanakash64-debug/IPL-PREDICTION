@@ -140,8 +140,8 @@ export default function UserDashboard({ authUser, onLogout, api }) {
               {questions.map((question) => {
                 const existingBet = betByQuestion[question._id];
                 const cutoffDate = toIST(question.cutoffTime);
-                const remainingMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : -1;
-                const isClosed = question.status === 'closed' || remainingMs <= 0;
+                const remainingMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : null;
+                const isClosed = question.status === 'closed' || (remainingMs !== null && remainingMs <= 0);
 
                 return (
                   <div key={question._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
@@ -204,7 +204,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                         Cutoff (IST): <span className="font-semibold text-white">{cutoffDate ? formatISTDateTime(cutoffDate) : 'N/A'}</span>
                       </p>
                       <p className="mt-1 text-slate-400">
-                        {remainingMs > 0 ? `Time left: ${formatCountdown(question.cutoffTime)}` : 'Betting closed for this question'}
+                        {remainingMs === null ? 'No cutoff set for this question' : remainingMs > 0 ? `Time left: ${formatCountdown(question.cutoffTime)}` : 'Betting closed for this question'}
                       </p>
                     </div>
 
