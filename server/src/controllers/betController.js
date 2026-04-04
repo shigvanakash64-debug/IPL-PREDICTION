@@ -104,11 +104,3 @@ module.exports = {
   confirmPayment,
   getBetById,
 };
-
-module.exports = {
-  createPrediction,
-  listUserPredictions,
-  updatePredictionAmount,
-  confirmPredictionPayment,
-  getPredictionById,
-};
