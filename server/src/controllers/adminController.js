@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Question = require('../models/Question');
 const Bet = require('../models/Bet');
 const User = require('../models/User');
@@ -10,18 +11,37 @@ const createQuestion = async (req, res) => {
       return res.status(400).json({ error: 'Question text and two options are required' });
     }
 
+    if (!req.user || !req.user._id) {
+      console.error('createQuestion error: req.user or req.user._id is missing');
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+
     const options = [optionA.trim(), optionB.trim()];
+
+    if (!Array.isArray(options) || options.length !== 2) {
+      return res.status(400).json({ error: 'Must provide exactly two options' });
+    }
 
     const question = new Question({
       text: text.trim(),
       options,
-      createdBy: req.user._id,
+      createdBy: new mongoose.Types.ObjectId(req.user._id),
     });
     await question.save();
 
+    // Populate createdBy before returning
+    await question.populate('createdBy', 'name username');
+
     return res.status(201).json({ question });
   } catch (error) {
-    console.error('createQuestion error:', error);
+    console.error('createQuestion error:', error.message || error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ error: messages.join(', ') });
+    }
+    if (error.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
     return res.status(500).json({ error: 'Unable to create question' });
   }
 };
