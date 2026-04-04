@@ -1,12 +1,15 @@
 const IST_OFFSET_MINUTES = 330;
 
-const toUTC = (date) => {
+const toUTC = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return null;
   const utcOffsetMs = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() + utcOffsetMs);
 };
 
 const toIST = (date = new Date()) => {
   const utcDate = toUTC(date);
+  if (!utcDate) return null;
   return new Date(utcDate.getTime() + IST_OFFSET_MINUTES * 60000);
 };
 
@@ -46,12 +49,14 @@ const isAfterIST = (targetDate) => {
   if (!targetDate) return false;
   const currentIst = toIST(new Date());
   const targetIst = toIST(new Date(targetDate));
+  if (!currentIst || !targetIst) return false;
   return currentIst.getTime() > targetIst.getTime();
 };
 
 const formatISTDateTime = (date) => {
   if (!date) return null;
   const ist = toIST(new Date(date));
+  if (!ist) return null;
   const pad = (unit) => String(unit).padStart(2, '0');
   const hours = ist.getHours();
   const minutes = ist.getMinutes();

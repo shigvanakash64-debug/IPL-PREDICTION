@@ -2,10 +2,11 @@ const mongoose = require('mongoose');
 const Question = require('../models/Question');
 const Bet = require('../models/Bet');
 const User = require('../models/User');
+const { parseISTDateTimeLocal } = require('../utils/timeUtils');
 
 const createQuestion = async (req, res) => {
   try {
-    const { text, optionA, optionB } = req.body;
+    const { text, optionA, optionB, cutoffTime } = req.body;
 
     if (!text || !optionA || !optionB) {
       return res.status(400).json({ error: 'Question text and two options are required' });
@@ -22,10 +23,19 @@ const createQuestion = async (req, res) => {
       return res.status(400).json({ error: 'Must provide exactly two options' });
     }
 
+    let parsedCutoffTime;
+    if (cutoffTime) {
+      parsedCutoffTime = parseISTDateTimeLocal(cutoffTime);
+      if (!parsedCutoffTime) {
+        return res.status(400).json({ error: 'cutoffTime must be a valid IST datetime string' });
+      }
+    }
+
     const question = new Question({
       text: text.trim(),
       options,
       createdBy: new mongoose.Types.ObjectId(req.user._id),
+      ...(parsedCutoffTime ? { cutoffTime: parsedCutoffTime } : {}),
     });
     await question.save();
 

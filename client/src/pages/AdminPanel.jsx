@@ -6,6 +6,7 @@ export default function AdminPanel({ authUser, onLogout, api }) {
   const [text, setText] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
+  const [cutoffTime, setCutoffTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [betsLoading, setBetsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,11 +76,17 @@ export default function AdminPanel({ authUser, onLogout, api }) {
     setSaving(true);
     setError('');
     try {
-      const response = await api.post('/admin/question', { text, optionA, optionB });
+      const response = await api.post('/admin/question', {
+        text,
+        optionA,
+        optionB,
+        cutoffTime: cutoffTime || undefined,
+      });
       setQuestions((current) => [response.data.question, ...current]);
       setText('');
       setOptionA('');
       setOptionB('');
+      setCutoffTime('');
     } catch (err) {
       setError(err?.response?.data?.error || 'Unable to create question.');
     } finally {
@@ -153,6 +160,16 @@ export default function AdminPanel({ authUser, onLogout, api }) {
                 className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-200">Cutoff time (IST)</label>
+              <input
+                type="datetime-local"
+                value={cutoffTime}
+                onChange={(e) => setCutoffTime(e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
+              />
+              <p className="mt-2 text-xs text-slate-500">Enter cutoff in India Standard Time. Leave blank for default cutoff.</p>
+            </div>
 
             {error && <p className="text-sm text-rose-400">{error}</p>}
 
@@ -198,6 +215,9 @@ export default function AdminPanel({ authUser, onLogout, api }) {
                   <div>
                     <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Question</p>
                     <h3 className="mt-3 text-lg font-semibold text-white">{question.text}</h3>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Cutoff: {question.cutoffTime ? new Date(question.cutoffTime).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST' : 'Default'}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {question.options.map((option, index) => (
                         <span key={index} className="rounded-full bg-slate-800 px-3 py-2 text-sm text-slate-200">
