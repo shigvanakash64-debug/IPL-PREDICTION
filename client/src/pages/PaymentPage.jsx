@@ -4,7 +4,8 @@ import api from '../api';
 import { UPI_NAME, UPI_OPTIONS, GOOGLE_FORM_BASE_URL } from '../config/paymentConfig';
 
 const toIST = (value) => {
-  const date = new Date(value);
+  const date = value instanceof Date ? value : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return null;
   const utc = date.getTime() + date.getTimezoneOffset() * 60000;
   return new Date(utc + 330 * 60000);
 };
@@ -13,6 +14,7 @@ const getStatus = (cutoffTime) => {
   if (!cutoffTime) return 'Open';
   const now = toIST(new Date());
   const cutoff = toIST(cutoffTime);
+  if (!cutoff) return 'Open';
   return now.getTime() > cutoff.getTime() ? 'Closed' : 'Open';
 };
 

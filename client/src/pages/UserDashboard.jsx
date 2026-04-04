@@ -7,6 +7,52 @@ export default function UserDashboard({ authUser, onLogout, api }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  const IST_OFFSET_MINUTES = 330;
+
+  const toIST = (value) => {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!date || Number.isNaN(date.getTime())) return null;
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    return new Date(utc + IST_OFFSET_MINUTES * 60000);
+  };
+
+  const formatISTDateTime = (value) => {
+    const date = toIST(value);
+    if (!date) return 'Invalid date';
+
+    const pad = (unit) => String(unit).padStart(2, '0');
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHour = hours % 12 === 0 ? 12 : hours % 12;
+    return `${pad(formattedHour)}:${pad(minutes)} ${ampm} IST`;
+  };
+
+  const formatCountdown = (cutoffTime) => {
+    const date = toIST(cutoffTime);
+    if (!date) return 'Unknown';
+
+    const diff = date.getTime() - now.getTime();
+    if (diff <= 0) return 'Closed';
+
+    const totalSeconds = Math.floor(diff / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    parts.push(`${String(minutes).padStart(2, '0')}m`);
+    parts.push(`${String(seconds).padStart(2, '0')}s`);
+    return parts.join(' ');
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -93,7 +139,9 @@ export default function UserDashboard({ authUser, onLogout, api }) {
             <div className="mt-6 grid gap-4 md:grid-cols-1">
               {questions.map((question) => {
                 const existingBet = betByQuestion[question._id];
-                const isClosed = question.status === 'closed';
+                const cutoffDate = toIST(question.cutoffTime);
+                const remainingMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : -1;
+                const isClosed = question.status === 'closed' || remainingMs <= 0;
 
                 return (
                   <div key={question._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
@@ -133,7 +181,6 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                     <div className="mt-6 space-y-4">
                       {['10', '20', '50', '100'].map((amount) => {
                         const pool = question.pools[amount];
-                        const total = pool.optionA_count + pool.optionB_count;
                         const optionA = question.options[0];
                         const optionB = question.options[1];
                         const popular = pool.optionA_count > pool.optionB_count ? optionA : pool.optionB_count > pool.optionA_count ? optionB : null;
@@ -150,6 +197,15 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                           </div>
                         );
                       })}
+                    </div>
+
+                    <div className="mt-4 rounded-3xl bg-slate-900 px-4 py-3 text-sm text-slate-300">
+                      <p>
+                        Cutoff (IST): <span className="font-semibold text-white">{cutoffDate ? formatISTDateTime(cutoffDate) : 'N/A'}</span>
+                      </p>
+                      <p className="mt-1 text-slate-400">
+                        {remainingMs > 0 ? `Time left: ${formatCountdown(question.cutoffTime)}` : 'Betting closed for this question'}
+                      </p>
                     </div>
 
                     {existingBet ? (
