@@ -1,43 +1,20 @@
 const Question = require('../models/Question');
-const Prediction = require('../models/Prediction');
-const { parseISTDateTimeLocal, getNext630PMIST } = require('../utils/timeUtils');
-const { syncApprovedPrediction } = require('../services/googleSheetsService');
-
-const deriveQuestionTypeByText = (text) => {
-  if (!text || typeof text !== 'string') return 'match';
-  const normalized = text.toLowerCase();
-  if (normalized.includes('toss')) return 'toss';
-  if (normalized.includes('match')) return 'match';
-  return 'match';
-};
+const Bet = require('../models/Bet');
+const User = require('../models/User');
 
 const createQuestion = async (req, res) => {
   try {
-    const { text, options, cutoffTime } = req.body;
-    const rawOptions = Array.isArray(options) ? options : [];
-    const cleanedOptions = rawOptions
-      .map((option) => (typeof option === 'string' ? option.trim() : ''))
-      .filter((option) => option);
+    const { text, optionA, optionB } = req.body;
 
-    if (!text || cleanedOptions.length < 2) {
-      return res.status(400).json({ error: 'Question text and at least two options are required' });
+    if (!text || !optionA || !optionB) {
+      return res.status(400).json({ error: 'Question text and two options are required' });
     }
 
-    if (cleanedOptions.length > 5) {
-      return res.status(400).json({ error: 'A question can have at most five options' });
-    }
+    const options = [optionA.trim(), optionB.trim()];
 
-    const cutoffDate = cutoffTime ? parseISTDateTimeLocal(cutoffTime) : getNext630PMIST();
-    if (!cutoffDate) {
-      return res.status(400).json({ error: 'Invalid cutoff time' });
-    }
-
-    const questionType = deriveQuestionTypeByText(text);
     const question = new Question({
       text: text.trim(),
-      options: cleanedOptions,
-      cutoffTime: cutoffDate,
-      questionType,
+      options,
       createdBy: req.user._id,
     });
     await question.save();
@@ -52,18 +29,7 @@ const createQuestion = async (req, res) => {
 const getQuestions = async (req, res) => {
   try {
     const questions = await Question.find().populate('createdBy', 'name username');
-    const normalizedQuestions = questions.map((question) => {
-      const questionType = question.questionType && ['toss', 'match'].includes(question.questionType)
-        ? question.questionType
-        : deriveQuestionTypeByText(question.text);
-      const questionObj = question.toObject ? question.toObject() : question;
-      return {
-        ...questionObj,
-        options: questionObj.options || [],
-        questionType,
-      };
-    });
-    return res.status(200).json({ questions: normalizedQuestions });
+    return res.status(200).json({ questions });
   } catch (error) {
     console.error('getQuestions error:', error);
     return res.status(500).json({ error: 'Unable to load questions' });
@@ -86,7 +52,7 @@ const deleteQuestion = async (req, res) => {
   }
 };
 
-const listPredictions = async (req, res) => {
+const listBets = async (req, res) => {
   try {
     const { status, search } = req.query;
     const query = {};
@@ -99,84 +65,71 @@ const listPredictions = async (req, res) => {
 
     if (search) {
       query.$or = [
-        { username: new RegExp(search, 'i') },
         { _id: new RegExp(search, 'i') },
-        { paymentNote: new RegExp(search, 'i') },
       ];
     }
 
-    const predictions = await Prediction.find(query)
+    const bets = await Bet.find(query)
       .sort({ createdAt: -1 })
-      .select('userId username matchId questionType selectedOption amount paymentStatus paymentNote createdAt');
+      .populate('userId', 'name username')
+      .populate('questionId', 'text');
 
-    return res.status(200).json({ predictions });
+    return res.status(200).json({ bets });
   } catch (error) {
-    console.error('listPredictions error:', error);
-    return res.status(500).json({ error: 'Unable to load predictions' });
+    console.error('listBets error:', error);
+    return res.status(500).json({ error: 'Unable to load bets' });
   }
 };
 
-const updatePredictionStatus = async (req, res) => {
+const approveBet = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    const validStatuses = ['paid', 'rejected'];
-
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid payment status' });
+    const bet = await Bet.findById(id).populate('questionId');
+    if (!bet) {
+      return res.status(404).json({ error: 'Bet not found' });
     }
 
-    const prediction = await Prediction.findById(id);
-    if (!prediction) {
-      return res.status(404).json({ error: 'Prediction not found' });
+    if (bet.paymentStatus === 'approved') {
+      return res.status(400).json({ error: 'Bet already approved' });
     }
 
-    prediction.paymentStatus = status;
-    await prediction.save();
+    bet.paymentStatus = 'approved';
+    await bet.save();
 
-    return res.status(200).json({ success: true, prediction });
+    // Update pool counts
+    const question = bet.questionId;
+    const amountStr = bet.amount.toString();
+    const optionIndex = question.options.indexOf(bet.selectedOption);
+    if (optionIndex === 0) {
+      question.pools[amountStr].optionA_count += 1;
+    } else if (optionIndex === 1) {
+      question.pools[amountStr].optionB_count += 1;
+    }
+    await question.save();
+
+    return res.status(200).json({ success: true, bet });
   } catch (error) {
-    console.error('updatePredictionStatus error:', error);
-    return res.status(500).json({ error: 'Unable to update prediction status' });
+    console.error('approveBet error:', error);
+    return res.status(500).json({ error: 'Unable to approve bet' });
   }
 };
 
-const approvePrediction = async (req, res) => {
+const rejectBet = async (req, res) => {
   try {
     const { id } = req.params;
-    const prediction = await Prediction.findById(id);
-    if (!prediction) {
-      return res.status(404).json({ error: 'Prediction not found' });
+    const bet = await Bet.findById(id);
+    if (!bet) {
+      return res.status(404).json({ error: 'Bet not found' });
     }
 
-    prediction.paymentStatus = 'paid';
-    prediction.paymentNote = prediction.paymentNote || `PRED_${prediction._id}`;
-    await prediction.save();
+    bet.paymentStatus = 'rejected';
+    await bet.save();
 
-    const synced = await syncApprovedPrediction(prediction);
-    return res.status(200).json({ success: true, prediction, sheetSynced: synced });
+    return res.status(200).json({ success: true, bet });
   } catch (error) {
-    console.error('approvePrediction error:', error);
-    return res.status(500).json({ error: 'Unable to approve prediction' });
+    console.error('rejectBet error:', error);
+    return res.status(500).json({ error: 'Unable to reject bet' });
   }
 };
 
-const rejectPrediction = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const prediction = await Prediction.findById(id);
-    if (!prediction) {
-      return res.status(404).json({ error: 'Prediction not found' });
-    }
-
-    prediction.paymentStatus = 'rejected';
-    await prediction.save();
-
-    return res.status(200).json({ success: true, prediction });
-  } catch (error) {
-    console.error('rejectPrediction error:', error);
-    return res.status(500).json({ error: 'Unable to reject prediction' });
-  }
-};
-
-module.exports = { createQuestion, getQuestions, deleteQuestion, listPredictions, updatePredictionStatus, approvePrediction, rejectPrediction };
+module.exports = { createQuestion, getQuestions, deleteQuestion, listBets, approveBet, rejectBet };

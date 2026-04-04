@@ -16,11 +16,11 @@ const getStatus = (cutoffTime) => {
   return now.getTime() > cutoff.getTime() ? 'Closed' : 'Open';
 };
 
-const buildGoogleFormUrl = ({ username, amount, predictionId }) => {
+const buildGoogleFormUrl = ({ username, amount, betId }) => {
   const params = new URLSearchParams({
     'entry.1999690954': username,
     'entry.1897096866': amount,
-    'entry.1838227550': `PRED_${predictionId}`,
+    'entry.1838227550': `BET_${betId}`,
   });
   return `${GOOGLE_FORM_BASE_URL}&${params.toString()}`;
 };
@@ -28,15 +28,13 @@ const buildGoogleFormUrl = ({ username, amount, predictionId }) => {
 export default function PaymentPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { amount, predictionId, option, question, cutoffTime, username } = location.state || {};
+  const { betId, questionId, selectedOption, amount } = location.state || {};
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
   const [copyMessage, setCopyMessage] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [scannerTarget, setScannerTarget] = useState(null);
-
-  const status = getStatus(cutoffTime);
 
   const copyUpiId = async (upiId) => {
     if (!upiId) return;
@@ -50,7 +48,7 @@ export default function PaymentPage() {
   };
 
   const getScannerQrUrl = (upiId) => {
-    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`PRED_${predictionId}`)}`;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`BET_${betId}`)}`;
     return `https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=${encodeURIComponent(upiLink)}&chld=L|1`;
   };
 
@@ -69,8 +67,8 @@ export default function PaymentPage() {
       <path d="M16 12a4 4 0 0 1-8 0 4 4 0 0 1 8 0Z" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
-  const isClosed = status === 'Closed';
-  const usernameValue = username || 'Participant';
+  const isClosed = false; // No cutoff for pool
+  const usernameValue = 'User';
   const visibleUpiOptions = UPI_OPTIONS.slice(0, 10);
   const hasDisabledUpiOptions = visibleUpiOptions.some((optionItem) => !optionItem.enabled);
 
@@ -85,7 +83,7 @@ export default function PaymentPage() {
     setShowScanner(false);
   };
 
-  if (!predictionId || !amount) {
+  if (!betId || !amount) {
     return (
       <div className="mx-auto max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
         <h1 className="text-2xl font-semibold text-white">Payment details missing</h1>
@@ -99,10 +97,6 @@ export default function PaymentPage() {
 
   const payWithUpi = (optionItem) => {
     setError('');
-    if (isClosed) {
-      setError('Prediction is closed. Payment is no longer allowed.');
-      return;
-    }
 
     if (!optionItem?.enabled) {
       setError('This UPI option is not active yet. Please use the active option above.');
@@ -115,23 +109,18 @@ export default function PaymentPage() {
       return;
     }
 
-    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`PRED_${predictionId}`)}`;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`BET_${betId}`)}`;
     window.location.href = upiLink;
   };
 
   const handleConfirmPayment = async () => {
-    if (isClosed) {
-      setError('Prediction is closed. You cannot confirm payment after cutoff.');
-      return;
-    }
-
     if (!amount || Number(amount) <= 0) {
       setError('Amount is required before submitting payment proof.');
       return;
     }
 
-    if (!predictionId) {
-      setError('Prediction not found. Unable to continue.');
+    if (!betId) {
+      setError('Bet not found. Unable to continue.');
       return;
     }
 
@@ -139,8 +128,8 @@ export default function PaymentPage() {
     setConfirming(true);
 
     try {
-      await api.patch(`/predictions/${predictionId}/confirm`);
-      const formUrl = buildGoogleFormUrl({ username: usernameValue, amount, predictionId });
+      await api.post('/bets/confirm-payment');
+      const formUrl = buildGoogleFormUrl({ username: 'User', amount, betId });
       setConfirmationMessage('Please submit payment proof in the next step.');
       setTimeout(() => {
         window.open(formUrl, '_blank');
@@ -159,9 +148,7 @@ export default function PaymentPage() {
           <div>
             <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">UPI payment</p>
             <h1 className="mt-2 text-3xl font-semibold text-white">Complete your payment</h1>
-            <p className="mt-2 text-slate-400">Choose a UPI option and pay the exact amount. Make sure the note is saved as PRED_{predictionId}.</p>
-            <p className="mt-2 text-sm text-slate-400">Prediction status: <span className="font-semibold text-white">{status}</span></p>
-            {isClosed && <p className="mt-2 rounded-2xl bg-rose-950 px-4 py-3 text-sm text-rose-300">Prediction Closed</p>}
+            <p className="mt-2 text-slate-400">Choose a UPI option and pay the exact amount. Make sure the note is saved as BET_{betId}.</p>
           </div>
           <Link to="/dashboard" className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700">
             Cancel and return
@@ -175,7 +162,7 @@ export default function PaymentPage() {
           </div>
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
             <p className="text-sm text-slate-400">Payment note</p>
-            <p className="mt-2 text-lg font-semibold text-white">PRED_{predictionId}</p>
+            <p className="mt-2 text-lg font-semibold text-white">BET_{betId}</p>
           </div>
         </div>
 
@@ -190,8 +177,8 @@ export default function PaymentPage() {
                       <button
                         type="button"
                         onClick={() => payWithUpi(optionItem)}
-                        disabled={isClosed || isOptionDisabled}
-                        className={`flex-1 rounded-3xl px-5 py-4 text-left text-sm font-semibold transition ${isClosed || isOptionDisabled ? 'bg-slate-950 text-slate-500 cursor-not-allowed opacity-60' : 'bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700'}`}
+                          disabled={isOptionDisabled}
+                          className={`flex-1 rounded-3xl px-5 py-4 text-left text-sm font-semibold transition ${isOptionDisabled ? 'bg-slate-950 text-slate-500 cursor-not-allowed opacity-60' : 'bg-slate-800 text-white hover:border-cyan-400 hover:bg-cyan-700'}`}
                       >
                         <span>{optionItem.label}</span>
                         {isOptionDisabled && <span className="block text-xs font-normal text-slate-400">Disabled until added</span>}
@@ -243,7 +230,7 @@ export default function PaymentPage() {
           <button
             type="button"
             onClick={handleConfirmPayment}
-            disabled={isClosed || confirming}
+            disabled={confirming}
             className="inline-flex w-full items-center justify-center rounded-3xl bg-cyan-500 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {confirming ? 'Processing…' : 'I have paid'}

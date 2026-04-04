@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom';
 export default function AdminPanel({ authUser, onLogout, api }) {
   const [questions, setQuestions] = useState([]);
   const [text, setText] = useState('');
-  const [options, setOptions] = useState(['', '']);
+  const [optionA, setOptionA] = useState('');
+  const [optionB, setOptionB] = useState('');
   const [loading, setLoading] = useState(true);
-  const [predictionsLoading, setPredictionsLoading] = useState(true);
+  const [betsLoading, setBetsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [predictions, setPredictions] = useState([]);
-  const [predictionsError, setPredictionsError] = useState('');
+  const [bets, setBets] = useState([]);
+  const [betsError, setBetsError] = useState('');
 
   const loadQuestions = async () => {
     setLoading(true);
@@ -27,52 +28,58 @@ export default function AdminPanel({ authUser, onLogout, api }) {
 
   useEffect(() => {
     loadQuestions();
-    loadPredictions();
+    loadBets();
   }, []);
 
-  const loadPredictions = async () => {
-    setPredictionsLoading(true);
-    setPredictionsError('');
+  const loadBets = async () => {
+    setBetsLoading(true);
+    setBetsError('');
     try {
-      const response = await api.get('/admin/predictions');
-      setPredictions(response.data.predictions || []);
+      const response = await api.get('/admin/bets');
+      setBets(response.data.bets || []);
     } catch (err) {
-      setPredictionsError('Unable to load payment predictions.');
+      setBetsError('Unable to load pending bets.');
     } finally {
-      setPredictionsLoading(false);
+      setBetsLoading(false);
     }
   };
 
-  const handlePaymentStatus = async (id, status) => {
-    setPredictionsError('');
+  const handleApprove = async (id) => {
+    setBetsError('');
     try {
-      const response = await api.patch(`/admin/predictions/${id}/status`, { status });
-      setPredictions((current) => current.map((item) => (item._id === id ? response.data.prediction : item)));
+      await api.patch(`/admin/bets/${id}/approve`);
+      setBets((current) => current.filter((item) => item._id !== id));
+      loadQuestions(); // Refresh pools
     } catch (err) {
-      setPredictionsError(err?.response?.data?.error || 'Unable to update payment status.');
+      setBetsError(err?.response?.data?.error || 'Unable to approve bet.');
+    }
+  };
+
+  const handleReject = async (id) => {
+    setBetsError('');
+    try {
+      await api.patch(`/admin/bets/${id}/reject`);
+      setBets((current) => current.filter((item) => item._id !== id));
+    } catch (err) {
+      setBetsError(err?.response?.data?.error || 'Unable to reject bet.');
     }
   };
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    const cleanedOptions = options.map((option) => option.trim()).filter(Boolean);
-    if (!text || cleanedOptions.length < 2) {
-      setError('Question text and at least two options are required.');
-      return;
-    }
-
-    if (cleanedOptions.length > 5) {
-      setError('A question can have at most five options.');
+    if (!text || !optionA || !optionB) {
+      setError('Question text and two options are required.');
       return;
     }
 
     setSaving(true);
     setError('');
     try {
-      const response = await api.post('/admin/question', { text, options: cleanedOptions });
+      const response = await api.post('/admin/question', { text, optionA, optionB });
       setQuestions((current) => [response.data.question, ...current]);
       setText('');
-      setOptions(['', '']);
+      setOptionA('');
+      setOptionB('');
     } catch (err) {
       setError(err?.response?.data?.error || 'Unable to create question.');
     } finally {
@@ -119,7 +126,7 @@ export default function AdminPanel({ authUser, onLogout, api }) {
       <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow">
           <h2 className="text-xl font-semibold text-white">Create question</h2>
-          <p className="mt-2 text-sm text-slate-400">Add a new question with 2 to 5 options.</p>
+          <p className="mt-2 text-sm text-slate-400">Add a new pool question with 2 options.</p>
 
           <form className="mt-6 space-y-4" onSubmit={handleCreate}>
             <div>
@@ -130,36 +137,22 @@ export default function AdminPanel({ authUser, onLogout, api }) {
                 className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
               />
             </div>
-            {options.map((optionValue, index) => (
-              <div key={index}>
-                <label className="block text-sm font-medium text-slate-200">Option {index + 1}</label>
-                <div className="mt-2 flex gap-3">
-                  <input
-                    value={optionValue}
-                    onChange={(e) => setOptions((current) => current.map((item, idx) => idx === index ? e.target.value : item))}
-                    className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
-                  />
-                  {options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => setOptions((current) => current.filter((_, idx) => idx !== index))}
-                      className="inline-flex h-12 items-center rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-400"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {options.length < 5 && (
-              <button
-                type="button"
-                onClick={() => setOptions((current) => [...current, ''])}
-                className="rounded-2xl bg-slate-800 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-              >
-                Add option
-              </button>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-200">Option A</label>
+              <input
+                value={optionA}
+                onChange={(e) => setOptionA(e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-200">Option B</label>
+              <input
+                value={optionB}
+                onChange={(e) => setOptionB(e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none focus:border-cyan-400"
+              />
+            </div>
 
             {error && <p className="text-sm text-rose-400">{error}</p>}
 
@@ -230,44 +223,42 @@ export default function AdminPanel({ authUser, onLogout, api }) {
       <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-glow">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-white">Payment verification</h2>
-            <p className="mt-1 text-sm text-slate-400">Approve or reject pending payments after manual verification.</p>
+            <h2 className="text-xl font-semibold text-white">Bet verification</h2>
+            <p className="mt-1 text-sm text-slate-400">Approve or reject pending bets after manual verification.</p>
           </div>
         </div>
 
-        {predictionsLoading ? (
-          <p className="mt-6 text-slate-400">Loading payment requests…</p>
-        ) : predictionsError ? (
-          <p className="mt-6 text-rose-400">{predictionsError}</p>
-        ) : predictions.length === 0 ? (
-          <p className="mt-6 text-slate-400">No payment records available yet.</p>
+        {betsLoading ? (
+          <p className="mt-6 text-slate-400">Loading bet requests…</p>
+        ) : betsError ? (
+          <p className="mt-6 text-rose-400">{betsError}</p>
+        ) : bets.length === 0 ? (
+          <p className="mt-6 text-slate-400">No pending bets.</p>
         ) : (
           <div className="mt-6 space-y-4">
-            {predictions.map((prediction) => (
-              <div key={prediction._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+            {bets.map((bet) => (
+              <div key={bet._id} className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Payment review</p>
-                    <h3 className="mt-3 text-lg font-semibold text-white">{prediction.username || 'Unknown user'}</h3>
-                    <p className="mt-2 text-sm text-slate-400">Prediction ID: <span className="font-semibold text-white">{prediction._id}</span></p>
-                    <p className="mt-1 text-sm text-slate-400">Note: <span className="font-semibold text-white">PRED_{prediction._id}</span></p>
-                    <p className="mt-1 text-sm text-slate-400">Amount: <span className="font-semibold text-white">₹{prediction.amount || 0}</span></p>
-                    <p className="mt-1 text-sm text-slate-400">Status: <span className="font-semibold text-white">{prediction.paymentStatus}</span></p>
+                    <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">Bet review</p>
+                    <h3 className="mt-3 text-lg font-semibold text-white">{bet.userId?.name || 'Unknown user'}</h3>
+                    <p className="mt-2 text-sm text-slate-400">Question: <span className="font-semibold text-white">{bet.questionId?.text}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Selected: <span className="font-semibold text-white">{bet.selectedOption}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Amount: <span className="font-semibold text-white">₹{bet.amount}</span></p>
+                    <p className="mt-1 text-sm text-slate-400">Status: <span className="font-semibold text-white">{bet.paymentStatus}</span></p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      disabled={prediction.paymentStatus === 'paid'}
-                      onClick={() => handlePaymentStatus(prediction._id, 'paid')}
-                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleApprove(bet._id)}
+                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
                     >
                       Approve
                     </button>
                     <button
                       type="button"
-                      disabled={prediction.paymentStatus === 'rejected'}
-                      onClick={() => handlePaymentStatus(prediction._id, 'rejected')}
-                      className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleReject(bet._id)}
+                      className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400"
                     >
                       Reject
                     </button>

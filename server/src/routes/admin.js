@@ -4,10 +4,9 @@ const {
   createQuestion,
   getQuestions,
   deleteQuestion,
-  listPredictions,
-  updatePredictionStatus,
-  approvePrediction,
-  rejectPrediction,
+  listBets,
+  approveBet,
+  rejectBet,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -16,9 +15,8 @@ router.use(authenticate, requireAdmin);
 router.post('/question', createQuestion);
 router.get('/questions', getQuestions);
 router.delete('/question/:id', deleteQuestion);
-router.get('/predictions', listPredictions);
-router.patch('/predictions/:id/approve', approvePrediction);
-router.patch('/predictions/:id/reject', rejectPrediction);
-router.patch('/predictions/:id/status', updatePredictionStatus);
+router.get('/bets', listBets);
+router.patch('/bets/:id/approve', approveBet);
+router.patch('/bets/:id/reject', rejectBet);
 
 module.exports = router;
