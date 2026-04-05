@@ -39,18 +39,16 @@ export default function BetPage() {
 
     setLoading(true);
     try {
-      const response = await api.post('/bets', { questionId, selectedOption, amount });
-      const bet = response.data.bet;
+      // Navigate to payment without creating bet yet
       navigate('/payment', {
         state: {
-          betId: bet._id,
           questionId,
           selectedOption,
           amount,
         },
       });
     } catch (err) {
-      setError(err?.response?.data?.error || 'Unable to create bet.');
+      setError(err?.response?.data?.error || 'Unable to proceed.');
     } finally {
       setLoading(false);
     }

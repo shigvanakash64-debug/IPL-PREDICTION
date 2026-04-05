@@ -27,12 +27,13 @@ const buildGoogleFormUrl = ({ username, amount, betId }) => {
   return `${GOOGLE_FORM_BASE_URL}&${params.toString()}`;
 };
 
-export default function PaymentPage() {
+export default function PaymentPage({ authUser }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { betId, questionId, selectedOption, amount } = location.state || {};
+  const { questionId, selectedOption, amount } = location.state || {};
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
   const [copyMessage, setCopyMessage] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -50,7 +51,7 @@ export default function PaymentPage() {
   };
 
   const getScannerQrUrl = (upiId) => {
-    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`BET_${betId}`)}`;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(tempBetRef)}`;
     return `https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=${encodeURIComponent(upiLink)}&chld=L|1`;
   };
 
@@ -70,7 +71,7 @@ export default function PaymentPage() {
     </svg>
   );
   const isClosed = false; // No cutoff for pool
-  const usernameValue = 'User';
+  const tempBetRef = `TEMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const visibleUpiOptions = UPI_OPTIONS.slice(0, 10);
   const hasDisabledUpiOptions = visibleUpiOptions.some((optionItem) => !optionItem.enabled);
 
@@ -85,7 +86,7 @@ export default function PaymentPage() {
     setShowScanner(false);
   };
 
-  if (!betId || !amount) {
+  if (!questionId || !amount) {
     return (
       <div className="mx-auto max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
         <h1 className="text-2xl font-semibold text-white">Payment details missing</h1>
@@ -111,7 +112,7 @@ export default function PaymentPage() {
       return;
     }
 
-    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(`BET_${betId}`)}`;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(tempBetRef)}`;
     window.location.href = upiLink;
   };
 
@@ -121,8 +122,8 @@ export default function PaymentPage() {
       return;
     }
 
-    if (!betId) {
-      setError('Bet not found. Unable to continue.');
+    if (!questionId || !selectedOption) {
+      setError('Bet details are missing. Unable to continue.');
       return;
     }
 
@@ -130,9 +131,14 @@ export default function PaymentPage() {
     setConfirming(true);
 
     try {
-      await api.post('/bets/confirm-payment');
-      const formUrl = buildGoogleFormUrl({ username: 'User', amount, betId });
+      // Create the bet now
+      const response = await api.post('/bets', { questionId, selectedOption, amount });
+      const bet = response.data.bet;
+      
+      // Open Google form with actual username
+      const formUrl = buildGoogleFormUrl({ username: usernameValue, amount, betId: bet._id });
       setConfirmationMessage('Please submit payment proof in the next step.');
+      setPaymentConfirmed(true);
       setTimeout(() => {
         window.open(formUrl, '_blank');
       }, 150);
@@ -150,7 +156,7 @@ export default function PaymentPage() {
           <div>
             <p className="text-sm uppercase tracking-[0.35em] text-cyan-400">UPI payment</p>
             <h1 className="mt-2 text-3xl font-semibold text-white">Complete your payment</h1>
-            <p className="mt-2 text-slate-400">Choose a UPI option and pay the exact amount. Make sure the note is saved as BET_{betId}.</p>
+            <p className="mt-2 text-slate-400">Choose a UPI option and pay the exact amount. Make sure the note is saved as {tempBetRef}.</p>
           </div>
           <Link to="/dashboard" className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-700">
             Cancel and return
@@ -164,7 +170,7 @@ export default function PaymentPage() {
           </div>
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
             <p className="text-sm text-slate-400">Payment note</p>
-            <p className="mt-2 text-lg font-semibold text-white">BET_{betId}</p>
+            <p className="mt-2 text-lg font-semibold text-white">{tempBetRef}</p>
           </div>
         </div>
 
@@ -232,10 +238,10 @@ export default function PaymentPage() {
           <button
             type="button"
             onClick={handleConfirmPayment}
-            disabled={confirming}
+            disabled={confirming || paymentConfirmed}
             className="inline-flex w-full items-center justify-center rounded-3xl bg-cyan-500 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {confirming ? 'Processing…' : 'I have paid'}
+            {confirming ? 'Processing…' : paymentConfirmed ? 'Payment Confirmed' : 'I have paid'}
           </button>
         </div>
       </div>

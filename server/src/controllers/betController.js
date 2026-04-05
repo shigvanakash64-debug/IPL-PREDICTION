@@ -46,8 +46,39 @@ const createBet = async (req, res) => {
       return res.status(400).json({ error: 'Selected option is not valid' });
     }
 
+    // Rate limiting: prevent creating bets too quickly (within 5 seconds)
+    const recentBet = await Bet.findOne({
+      userId: req.user._id,
+      createdAt: { $gte: new Date(Date.now() - 5000) }
+    });
+    if (recentBet) {
+      return res.status(429).json({ error: 'Please wait a few seconds before placing another bet' });
+    }
+
     // Prevent duplicate bets per user per question
     const existingBet = await Bet.findOne({
+      userId: req.user._id,
+      questionId,
+    });
+
+    if (existingBet) {
+      return res.status(400).json({ error: 'You have already placed a bet on this question' });
+    }
+
+    const bet = await Bet.create({
+      userId: req.user._id,
+      questionId,
+      selectedOption,
+      amount,
+      paymentStatus: 'pending',
+    });
+
+    return res.status(201).json({ success: true, bet });
+  } catch (error) {
+    console.error('createBet error:', error);
+    return res.status(500).json({ error: 'Unable to create bet' });
+  }
+};
       userId: req.user._id,
       questionId,
     });

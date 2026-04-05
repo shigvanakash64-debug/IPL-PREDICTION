@@ -141,7 +141,7 @@ function App() {
             />
             <Route
               path="/payment"
-              element={authUser ? <PaymentPage /> : <Navigate to="/login" />}
+              element={authUser ? <PaymentPage authUser={authUser} /> : <Navigate to="/login" />}
             />
             <Route
               path="/confirmation"
