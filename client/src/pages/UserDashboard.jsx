@@ -184,9 +184,16 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                         const optionA = question.options[0];
                         const optionB = question.options[1];
                         const popular = pool.optionA_count > pool.optionB_count ? optionA : pool.optionB_count > pool.optionA_count ? optionB : null;
+                        const totalUsers = pool.optionA_count + pool.optionB_count;
+                        const totalPoolValue = Number(amount) * totalUsers;
                         return (
                           <div key={amount} className="rounded-2xl bg-slate-900 p-4">
-                            <h4 className="text-sm font-semibold text-cyan-400">₹{amount} Pool</h4>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <h4 className="text-sm font-semibold text-cyan-400">₹{amount} Pool</h4>
+                              <div className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-emerald-300">
+                                Total ₹{totalPoolValue}
+                              </div>
+                            </div>
                             <div className="mt-2 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
                               <div className="min-w-0 break-words">{optionA}: {pool.optionA_count} users</div>
                               <div className="min-w-0 break-words">{optionB}: {pool.optionB_count} users</div>
