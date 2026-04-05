@@ -155,7 +155,7 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                       </span>
                     </div>
 
-                    <div className="mt-4 grid gap-3 grid-cols-2">
+                    <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2">
                       {question.options.map((option, index) => {
                         const selected = existingBet?.selectedOption === option;
                         const isDisabled = isClosed || selected;
@@ -187,9 +187,9 @@ export default function UserDashboard({ authUser, onLogout, api }) {
                         return (
                           <div key={amount} className="rounded-2xl bg-slate-900 p-4">
                             <h4 className="text-sm font-semibold text-cyan-400">₹{amount} Pool</h4>
-                            <div className="mt-2 flex justify-between text-sm text-slate-300">
-                              <span>{optionA}: {pool.optionA_count} users</span>
-                              <span>{optionB}: {pool.optionB_count} users</span>
+                            <div className="mt-2 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+                              <div className="min-w-0 break-words">{optionA}: {pool.optionA_count} users</div>
+                              <div className="min-w-0 break-words">{optionB}: {pool.optionB_count} users</div>
                             </div>
                             {popular && (
                               <p className="mt-1 text-xs text-emerald-400">🔥 Most Popular: {popular}</p>
