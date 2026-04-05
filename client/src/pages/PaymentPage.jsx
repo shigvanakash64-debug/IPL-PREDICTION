@@ -75,6 +75,8 @@ export default function PaymentPage({ authUser }) {
   const visibleUpiOptions = UPI_OPTIONS.slice(0, 10);
   const hasDisabledUpiOptions = visibleUpiOptions.some((optionItem) => !optionItem.enabled);
 
+  const usernameValue = authUser?.username || authUser?.name || 'User';
+
   const openScanner = (optionItem) => {
     if (!optionItem?.id) return;
     setScannerTarget(optionItem);
@@ -130,19 +132,24 @@ export default function PaymentPage({ authUser }) {
     setError('');
     setConfirming(true);
 
+    const paymentWindow = window.open('', '_blank');
+    if (!paymentWindow) {
+      setError('Unable to open payment form window. Please allow popups for this site.');
+      setConfirming(false);
+      return;
+    }
+
     try {
-      // Create the bet now
       const response = await api.post('/bets', { questionId, selectedOption, amount });
       const bet = response.data.bet;
-      
-      // Open Google form with actual username
       const formUrl = buildGoogleFormUrl({ username: usernameValue, amount, betId: bet._id });
       setConfirmationMessage('Please submit payment proof in the next step.');
       setPaymentConfirmed(true);
-      setTimeout(() => {
-        window.open(formUrl, '_blank');
-      }, 150);
+      paymentWindow.location.href = formUrl;
     } catch (err) {
+      if (paymentWindow && !paymentWindow.closed) {
+        paymentWindow.close();
+      }
       setError(err?.response?.data?.error || 'Unable to confirm payment.');
     } finally {
       setConfirming(false);

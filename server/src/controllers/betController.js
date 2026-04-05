@@ -62,6 +62,10 @@ const createBet = async (req, res) => {
     });
 
     if (existingBet) {
+      if (existingBet.paymentStatus === 'pending' && existingBet.selectedOption === selectedOption && existingBet.amount === amount) {
+        return res.status(200).json({ success: true, bet: existingBet, alreadyExists: true });
+      }
+
       return res.status(400).json({ error: 'You have already placed a bet on this question' });
     }
 
